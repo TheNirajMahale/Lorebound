@@ -2,7 +2,7 @@
 
 Lorebound is a premium, offline-first ebook reader and reading tracker built with Flutter. It features a custom 100% native render engine for EPUBs, offering both infinite vertical scroll and paginated reading modes with an immersive, distraction-free UI. 
 
-Currently, Lorebound operates as a powerful standalone offline reader. In the future, it will serve as the mobile frontend for the **Lorekeeper API** (a private reading cloud backend) and **RuneGlass** (reading assistance module).
+Currently, Lorebound operates as a powerful standalone offline reader. In the future, it will serve as the mobile frontend for the [**Lorekeeper API**](https://github.com/TheNirajMahale/lorekeeper-api) (a private reading cloud backend) and **RuneGlass** (reading assistance module).
 
 ## Key Features
 

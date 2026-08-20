@@ -1,7 +1,7 @@
 # Lorebound
 
 ## 1. Project Overview
-**Lorebound** is a personal ebook reader and reading tracker app built with Flutter. It serves as the user-facing frontend for the **Lorekeeper API** (Private Reading Cloud backend) and the **RuneGlass** reading-assistance module.
+**Lorebound** is a personal ebook reader and reading tracker app built with Flutter. It serves as the user-facing frontend for the [**Lorekeeper API**](https://github.com/TheNirajMahale/lorekeeper-api) (Private Reading Cloud backend) and the **RuneGlass** reading-assistance module.
 
 ### Vision
 A premium, offline-first ebook reader with cloud sync. Users can import EPUBs locally, read with a fully customizable native reader engine, track their progress, and optionally sync everything to their private Lorekeeper server.
@@ -10,7 +10,7 @@ A premium, offline-first ebook reader with cloud sync. Users can import EPUBs lo
 
 | Project | Name | Role |
 |---|---|---|
-| Backend API | **LoreKeeper** | Private book library + reading tracker + reading assistance APIs |
+| Backend API | [**LoreKeeper**](https://github.com/TheNirajMahale/lorekeeper-api) | Private book library + reading tracker + reading assistance APIs |
 | Reading Module | **RuneGlass** | Bionic highlighting, dictionary lookup, PDF extraction (Lorekeeper sub-module) |
 | Mobile App | **Lorebound** | Flutter reader app consuming Lorekeeper's APIs |
 
