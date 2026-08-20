@@ -35,49 +35,52 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
       borderRadius: const BorderRadius.vertical(
         top: Radius.circular(AppSpacing.radiusXl),
       ),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.65,
-        child: SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              // Drag Handle
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              TabBar(
-                controller: _tabController,
-                indicator: const BoxDecoration(), // Remove underline
-                labelColor: colorScheme.primary,
-                unselectedLabelColor: colorScheme.onSurfaceVariant,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                tabs: const [
-                  Tab(text: 'Filter'),
-                  Tab(text: 'Sort'),
-                  Tab(text: 'Display'),
-                ],
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildFilterTab(context, colorScheme),
-                    _buildSortTab(context, colorScheme),
-                    _buildDisplayTab(context, colorScheme),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+            TabBar(
+              controller: _tabController,
+              indicator: const BoxDecoration(), // Remove underline
+              labelColor: colorScheme.primary,
+              unselectedLabelColor: colorScheme.onSurfaceVariant,
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(text: 'Filter'),
+                Tab(text: 'Sort'),
+                Tab(text: 'Display'),
+              ],
+            ),
+            const Divider(height: 1),
+            AnimatedBuilder(
+              animation: _tabController,
+              builder: (context, _) {
+                switch (_tabController.index) {
+                  case 0:
+                    return _buildFilterTab(context, colorScheme);
+                  case 1:
+                    return _buildSortTab(context, colorScheme);
+                  case 2:
+                    return _buildDisplayTab(context, colorScheme);
+                  default:
+                    return const SizedBox.shrink();
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -88,6 +91,7 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
     final notifier = ref.read(libraryPreferencesProvider.notifier);
 
     return ListView(
+      shrinkWrap: true,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Row(
@@ -155,6 +159,7 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
     final notifier = ref.read(libraryPreferencesProvider.notifier);
 
     return ListView(
+      shrinkWrap: true,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Row(
@@ -194,18 +199,38 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
   }
 
   Widget _buildDisplayTab(BuildContext context, ColorScheme colorScheme) {
-    // Stub for Display modes for now as we'd need to adapt the GridView in LibraryScreen
+    final prefs = ref.watch(libraryPreferencesProvider);
+    final notifier = ref.read(libraryPreferencesProvider.notifier);
+
     return ListView(
+      shrinkWrap: true,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Text('Display Mode', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
-        const SizedBox(height: AppSpacing.lg),
-        Center(
-          child: Text(
-            'Display mode options (Compact, Comfortable, List) will be available in a future update.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
+        const SizedBox(height: AppSpacing.sm),
+        RadioListTile<DisplayMode>(
+          title: const Text('Comfortable Grid'),
+          subtitle: const Text('Larger covers, 2 per row'),
+          value: DisplayMode.comfortableGrid,
+          groupValue: prefs.displayMode,
+          onChanged: (val) => val != null ? notifier.updateDisplayMode(val) : null,
+          contentPadding: EdgeInsets.zero,
+        ),
+        RadioListTile<DisplayMode>(
+          title: const Text('Compact Grid'),
+          subtitle: const Text('Smaller covers, 3 per row'),
+          value: DisplayMode.compactGrid,
+          groupValue: prefs.displayMode,
+          onChanged: (val) => val != null ? notifier.updateDisplayMode(val) : null,
+          contentPadding: EdgeInsets.zero,
+        ),
+        RadioListTile<DisplayMode>(
+          title: const Text('List'),
+          subtitle: const Text('Detailed view with reading progress'),
+          value: DisplayMode.list,
+          groupValue: prefs.displayMode,
+          onChanged: (val) => val != null ? notifier.updateDisplayMode(val) : null,
+          contentPadding: EdgeInsets.zero,
         ),
       ],
     );

@@ -4,7 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../providers/library_controller.dart';
 import '../widgets/library_filter_sheet.dart';
 import '../widgets/book_card.dart';
+import '../widgets/book_list_tile.dart';
+import '../widgets/category_management_dialog.dart';
+import '../widgets/assign_category_sheet.dart';
+import '../../../../core/widgets/expressive_chip.dart';
 import '../providers/library_preferences_provider.dart';
+import '../providers/library_categories_provider.dart';
 import '../../data/services/epub_import_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 
@@ -73,11 +78,41 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           if (books.isEmpty) {
             return _buildEmptyState(context, colorScheme);
           }
+          final prefs = ref.watch(libraryPreferencesProvider);
+          
+          if (prefs.displayMode == DisplayMode.list) {
+            return ListView.builder(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              itemCount: books.length,
+              itemBuilder: (context, index) {
+                final book = books[index];
+                return BookListTile(
+                  book: book,
+                  isSelected: _selectedBookIds.contains(book.id),
+                  isSelectionMode: _isSelectionMode,
+                  onTap: () {
+                    if (_isSelectionMode) {
+                      _toggleSelection(book.id);
+                    } else {
+                      context.push('/library/book/${book.id}');
+                    }
+                  },
+                  onLongPress: () {
+                    _toggleSelection(book.id);
+                  },
+                );
+              },
+            );
+          }
+
+          final crossAxisCount = prefs.displayMode == DisplayMode.compactGrid ? 3 : 2;
+          final childAspectRatio = prefs.displayMode == DisplayMode.compactGrid ? 0.65 : 0.70;
+
           return GridView.builder(
             padding: const EdgeInsets.all(AppSpacing.md),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.65,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
               crossAxisSpacing: AppSpacing.md,
               mainAxisSpacing: AppSpacing.md,
             ),
@@ -182,6 +217,40 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return AppBar(
       title: const Text('Library'),
+      centerTitle: false,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(56.0),
+        child: SizedBox(
+          height: 56.0,
+          child: Consumer(
+            builder: (context, ref, child) {
+              final prefs = ref.watch(libraryPreferencesProvider);
+              final categoriesState = ref.watch(categoriesProvider);
+              
+              return ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8.0),
+                children: [
+                  ExpressiveChip(
+                    label: 'All',
+                    isSelected: prefs.selectedCategoryId == null,
+                    onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
+                  ),
+                  ...categoriesState.when(
+                    data: (categories) => categories.map((cat) => ExpressiveChip(
+                      label: cat.name,
+                      isSelected: prefs.selectedCategoryId == cat.id,
+                      onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(cat.id),
+                    )).toList(),
+                    loading: () => const [Padding(padding: EdgeInsets.all(8.0), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))],
+                    error: (_, __) => const [],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.search),
@@ -203,9 +272,22 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             );
           },
         ),
-        IconButton(
+        PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert),
-          onPressed: () {},
+          onSelected: (value) {
+            if (value == 'new_category') {
+              showDialog(
+                context: context,
+                builder: (context) => const CategoryManagementDialog(),
+              );
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'new_category',
+              child: Text('New Category'),
+            ),
+          ],
         ),
       ],
     );
@@ -241,7 +323,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Change category',
-            onPressed: () {},
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (context) => AssignCategorySheet(selectedBookIds: _selectedBookIds.toList()),
+              ).then((_) => _clearSelection());
+            },
           ),
           IconButton(
             icon: const Icon(Icons.visibility_outlined),

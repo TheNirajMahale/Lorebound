@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lorebound/core/theme/app_spacing.dart';
 import 'package:lorebound/core/theme/app_typography.dart';
+import 'package:lorebound/core/widgets/expressive_chip.dart';
 import '../providers/reader_controller.dart';
 import '../../domain/models/reader_config.dart';
 
@@ -290,14 +291,14 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
         SegmentedButton<ReaderMode>(
           segments: const [
             ButtonSegment(
-              value: ReaderMode.paginated,
-              label: Text('Paginated'),
-              icon: Icon(Icons.menu_book),
-            ),
-            ButtonSegment(
               value: ReaderMode.scroll,
               label: Text('Vertical Scroll'),
               icon: Icon(Icons.swap_vert),
+            ),
+            ButtonSegment(
+              value: ReaderMode.paginated,
+              label: Text('Paginated'),
+              icon: Icon(Icons.menu_book),
             ),
           ],
           selected: {config.mode},
@@ -324,19 +325,16 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
           child: Row(
             children: ReaderThemePreset.values.map((preset) {
               final isSelected = config.themePreset == preset;
-              return Padding(
-                padding: const EdgeInsets.only(right: AppSpacing.sm),
-                child: ChoiceChip(
-                  label: Text(preset.name.toUpperCase()),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      notifier.updateConfig(
-                        config.copyWith(themePreset: preset),
-                      );
-                    }
-                  },
-                ),
+              return ExpressiveChip(
+                label: preset.name.toUpperCase(),
+                isSelected: isSelected,
+                onTap: () {
+                  if (!isSelected) {
+                    notifier.updateConfig(
+                      config.copyWith(themePreset: preset),
+                    );
+                  }
+                },
               );
             }).toList(),
           ),
@@ -496,14 +494,12 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
     ReaderController notifier,
   ) {
     final isSelected = config.fontFamily == fontFamily;
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(fontFamily: fontFamily),
-      ),
-      selected: isSelected,
-      onSelected: (selected) {
-        if (selected) {
+    return ExpressiveChip(
+      label: label,
+      fontFamily: fontFamily,
+      isSelected: isSelected,
+      onTap: () {
+        if (!isSelected) {
           notifier.updateConfig(
             config.copyWith(fontFamily: fontFamily),
           );

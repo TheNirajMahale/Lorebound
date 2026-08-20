@@ -74,4 +74,61 @@ class LocalBookRepository {
   Future<void> deleteBooks(List<int> ids) async {
     await (_db.delete(_db.books)..where((t) => t.id.isIn(ids))).go();
   }
+
+  // --- Category Methods ---
+
+  Future<List<CategoryEntity>> getAllCategories() {
+    return _db.select(_db.categories).get();
+  }
+
+  Stream<List<CategoryEntity>> watchAllCategories() {
+    return _db.select(_db.categories).watch();
+  }
+
+  Stream<List<BookCategoryEntity>> watchAllBookCategories() {
+    return _db.select(_db.bookCategories).watch();
+  }
+
+  Future<int> insertCategory(CategoriesCompanion category) {
+    return _db.into(_db.categories).insert(category);
+  }
+
+  Future<int> renameCategory(int id, String newName) {
+    return (_db.update(_db.categories)..where((t) => t.id.equals(id)))
+        .write(CategoriesCompanion(name: drift.Value(newName)));
+  }
+
+  Future<int> deleteCategory(int id) async {
+    // Delete from join table first
+    await (_db.delete(_db.bookCategories)..where((t) => t.categoryId.equals(id))).go();
+    return (_db.delete(_db.categories)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<List<CategoryEntity>> getCategoriesForBook(int bookId) async {
+    final query = _db.select(_db.bookCategories).join([
+      drift.innerJoin(
+        _db.categories,
+        _db.categories.id.equalsExp(_db.bookCategories.categoryId),
+      )
+    ])..where(_db.bookCategories.bookId.equals(bookId));
+
+    final results = await query.get();
+    return results.map((row) => row.readTable(_db.categories)).toList();
+  }
+
+  Future<void> setBooksCategory(List<int> bookIds, int categoryId, bool assign) async {
+    await _db.transaction(() async {
+      for (final bookId in bookIds) {
+        if (assign) {
+          await _db.into(_db.bookCategories).insertOnConflictUpdate(
+            BookCategoryEntity(bookId: bookId, categoryId: categoryId)
+          );
+        } else {
+          await (_db.delete(_db.bookCategories)
+                ..where((t) => t.bookId.equals(bookId) & t.categoryId.equals(categoryId)))
+              .go();
+        }
+      }
+    });
+  }
 }

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../providers/library_controller.dart';
 import '../providers/book_chapters_provider.dart';
+import '../widgets/assign_category_sheet.dart';
 import '../../domain/models/book.dart';
 
 class BookDetailScreen extends ConsumerWidget {
@@ -40,7 +41,13 @@ class BookDetailScreen extends ConsumerWidget {
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'delete') {
+              if (value == 'change_category') {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
+                );
+              } else if (value == 'delete') {
                 bool deleteLocalFiles = true;
                 final confirm = await showDialog<bool>(
                   context: context,
@@ -86,6 +93,10 @@ class BookDetailScreen extends ConsumerWidget {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'change_category',
+                child: Text('Change Category'),
+              ),
               PopupMenuItem(
                 value: 'delete',
                 child: Text('Delete Book', style: TextStyle(color: colorScheme.error)),

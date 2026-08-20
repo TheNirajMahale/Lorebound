@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/book.dart';
 import 'library_controller.dart';
+import 'library_categories_provider.dart';
 
 enum SortType { title, lastRead, dateAdded }
 enum FilterState { include, exclude, unselected }
@@ -15,6 +16,7 @@ class LibraryPreferences {
   final FilterState startedFilter;
   final DisplayMode displayMode;
   final int itemsPerRow;
+  final int? selectedCategoryId; // null means 'All'
 
   const LibraryPreferences({
     this.searchQuery = '',
@@ -25,6 +27,7 @@ class LibraryPreferences {
     this.startedFilter = FilterState.unselected,
     this.displayMode = DisplayMode.comfortableGrid,
     this.itemsPerRow = 2,
+    this.selectedCategoryId,
   });
 
   LibraryPreferences copyWith({
@@ -36,6 +39,7 @@ class LibraryPreferences {
     FilterState? startedFilter,
     DisplayMode? displayMode,
     int? itemsPerRow,
+    int? Function()? selectedCategoryId,
   }) {
     return LibraryPreferences(
       searchQuery: searchQuery ?? this.searchQuery,
@@ -46,6 +50,7 @@ class LibraryPreferences {
       startedFilter: startedFilter ?? this.startedFilter,
       displayMode: displayMode ?? this.displayMode,
       itemsPerRow: itemsPerRow ?? this.itemsPerRow,
+      selectedCategoryId: selectedCategoryId != null ? selectedCategoryId() : this.selectedCategoryId,
     );
   }
 }
@@ -86,6 +91,10 @@ class LibraryPreferencesNotifier extends Notifier<LibraryPreferences> {
     state = state.copyWith(itemsPerRow: items);
   }
   
+  void updateSelectedCategoryId(int? categoryId) {
+    state = state.copyWith(selectedCategoryId: () => categoryId);
+  }
+  
   void clearFilters() {
     state = state.copyWith(
       readFilter: FilterState.unselected,
@@ -102,9 +111,18 @@ final libraryPreferencesProvider = NotifierProvider<LibraryPreferencesNotifier, 
 final filteredLibraryProvider = Provider<AsyncValue<List<Book>>>((ref) {
   final booksState = ref.watch(libraryControllerProvider);
   final prefs = ref.watch(libraryPreferencesProvider);
+  final bookCategoriesState = ref.watch(bookCategoriesProvider);
 
   return booksState.whenData((books) {
+    final bookCategories = bookCategoriesState.value ?? [];
+
     var filtered = books.where((book) {
+      // 0. Category Filter
+      if (prefs.selectedCategoryId != null) {
+        final isInCat = bookCategories.any((bc) => bc.bookId == book.id && bc.categoryId == prefs.selectedCategoryId);
+        if (!isInCat) return false;
+      }
+
       // 1. Search Query
       if (prefs.searchQuery.isNotEmpty) {
         final query = prefs.searchQuery.toLowerCase();
