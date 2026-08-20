@@ -1,0 +1,213 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_spacing.dart';
+import '../providers/library_preferences_provider.dart';
+
+class LibraryFilterSheet extends ConsumerStatefulWidget {
+  const LibraryFilterSheet({super.key});
+
+  @override
+  ConsumerState<LibraryFilterSheet> createState() => _LibraryFilterSheetState();
+}
+
+class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Material(
+      color: colorScheme.surface,
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(AppSpacing.radiusXl),
+      ),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.65,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              TabBar(
+                controller: _tabController,
+                indicator: const BoxDecoration(), // Remove underline
+                labelColor: colorScheme.primary,
+                unselectedLabelColor: colorScheme.onSurfaceVariant,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                tabs: const [
+                  Tab(text: 'Filter'),
+                  Tab(text: 'Sort'),
+                  Tab(text: 'Display'),
+                ],
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildFilterTab(context, colorScheme),
+                    _buildSortTab(context, colorScheme),
+                    _buildDisplayTab(context, colorScheme),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterTab(BuildContext context, ColorScheme colorScheme) {
+    final prefs = ref.watch(libraryPreferencesProvider);
+    final notifier = ref.read(libraryPreferencesProvider.notifier);
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Filters', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+            TextButton(
+              onPressed: () => notifier.clearFilters(),
+              child: const Text('Reset'),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _buildTriStateRow('Read', prefs.readFilter, notifier.updateReadFilter, colorScheme),
+        _buildTriStateRow('Unread', prefs.unreadFilter, notifier.updateUnreadFilter, colorScheme),
+        _buildTriStateRow('Started', prefs.startedFilter, notifier.updateStartedFilter, colorScheme),
+      ],
+    );
+  }
+
+  Widget _buildTriStateRow(String label, FilterState state, ValueChanged<FilterState> onChanged, ColorScheme colorScheme) {
+    IconData icon;
+    Color color;
+    switch (state) {
+      case FilterState.include:
+        icon = Icons.check_box;
+        color = colorScheme.primary;
+        break;
+      case FilterState.exclude:
+        icon = Icons.indeterminate_check_box;
+        color = colorScheme.error;
+        break;
+      case FilterState.unselected:
+        icon = Icons.check_box_outline_blank;
+        color = colorScheme.onSurfaceVariant;
+        break;
+    }
+
+    return InkWell(
+      onTap: () {
+        if (state == FilterState.unselected) {
+          onChanged(FilterState.include);
+        } else if (state == FilterState.include) {
+          onChanged(FilterState.exclude);
+        } else {
+          onChanged(FilterState.unselected);
+        }
+      },
+      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: AppSpacing.md),
+            Text(label, style: const TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortTab(BuildContext context, ColorScheme colorScheme) {
+    final prefs = ref.watch(libraryPreferencesProvider);
+    final notifier = ref.read(libraryPreferencesProvider.notifier);
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Sort By', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+            IconButton(
+              icon: Icon(prefs.isAscending ? Icons.arrow_upward : Icons.arrow_downward),
+              onPressed: () => notifier.toggleSortDirection(),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        RadioListTile<SortType>(
+          title: const Text('Title'),
+          value: SortType.title,
+          groupValue: prefs.sortType,
+          onChanged: (val) => val != null ? notifier.updateSortType(val) : null,
+          contentPadding: EdgeInsets.zero,
+        ),
+        RadioListTile<SortType>(
+          title: const Text('Last Read'),
+          value: SortType.lastRead,
+          groupValue: prefs.sortType,
+          onChanged: (val) => val != null ? notifier.updateSortType(val) : null,
+          contentPadding: EdgeInsets.zero,
+        ),
+        RadioListTile<SortType>(
+          title: const Text('Date Added'),
+          value: SortType.dateAdded,
+          groupValue: prefs.sortType,
+          onChanged: (val) => val != null ? notifier.updateSortType(val) : null,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDisplayTab(BuildContext context, ColorScheme colorScheme) {
+    // Stub for Display modes for now as we'd need to adapt the GridView in LibraryScreen
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Text('Display Mode', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+        const SizedBox(height: AppSpacing.lg),
+        Center(
+          child: Text(
+            'Display mode options (Compact, Comfortable, List) will be available in a future update.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ],
+    );
+  }
+}
