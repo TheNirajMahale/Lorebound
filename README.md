@@ -18,7 +18,7 @@ To run Lorebound locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/lorebound.git
+git clone https://github.com/TheNirajMahale/lorebound.git
 
 # Navigate to the directory
 cd lorebound
