@@ -91,44 +91,34 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
   }
 
   Widget _buildTriStateRow(String label, FilterState state, ValueChanged<FilterState> onChanged, ColorScheme colorScheme) {
-    IconData icon;
-    Color color;
+    bool? checkboxValue;
     switch (state) {
       case FilterState.include:
-        icon = Icons.check_box;
-        color = colorScheme.primary;
+        checkboxValue = true;
         break;
       case FilterState.exclude:
-        icon = Icons.indeterminate_check_box;
-        color = colorScheme.error;
+        checkboxValue = null;
         break;
       case FilterState.unselected:
-        icon = Icons.check_box_outline_blank;
-        color = colorScheme.onSurfaceVariant;
+        checkboxValue = false;
         break;
     }
 
-    return InkWell(
-      onTap: () {
-        if (state == FilterState.unselected) {
+    return CheckboxListTile(
+      title: Text(label, style: const TextStyle(fontSize: 16)),
+      tristate: true,
+      value: checkboxValue,
+      onChanged: (bool? newValue) {
+        if (newValue == true) {
           onChanged(FilterState.include);
-        } else if (state == FilterState.include) {
+        } else if (newValue == null) {
           onChanged(FilterState.exclude);
         } else {
           onChanged(FilterState.unselected);
         }
       },
-      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-        child: Row(
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: AppSpacing.md),
-            Text(label, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
     );
   }
 
