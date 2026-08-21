@@ -23,7 +23,8 @@ class ReaderSettingsSheet extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ReaderSettingsSheet> createState() => _ReaderSettingsSheetState();
+  ConsumerState<ReaderSettingsSheet> createState() =>
+      _ReaderSettingsSheetState();
 }
 
 class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
@@ -50,113 +51,97 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Material(
-      color: colorScheme.surface,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppSpacing.radiusXl),
-      ),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.65,
-        child: SafeArea(
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.65,
+      child: SafeArea(
         top: false,
         child: Column(
           children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+            // Top Tab Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              child: AnimatedBuilder(
+                animation: _tabController,
+                builder: (context, _) {
+                  return TabBar(
+                    controller: _tabController,
+                    indicator:
+                        const BoxDecoration(), // Removes the underline completely
+                    dividerColor: Colors.transparent,
+                    labelColor: colorScheme.primary,
+                    unselectedLabelColor: colorScheme.onSurfaceVariant,
+                    labelStyle: TextStyle(
+                      fontSize: AppTypography.xs,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: AppTypography.fontFamily,
+                    ),
+                    unselectedLabelStyle: TextStyle(
+                      fontSize: AppTypography.xs,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: AppTypography.fontFamily,
+                    ),
+                    tabs: [
+                      Tab(
+                        icon: Icon(
+                          _tabController.index == 0
+                              ? Icons.menu_book
+                              : Icons.menu_book_outlined,
+                          size: 20,
+                        ),
+                        text: 'Navigation',
+                        height: 48,
+                      ),
+                      Tab(
+                        icon: Icon(
+                          _tabController.index == 1
+                              ? Icons.palette
+                              : Icons.palette_outlined,
+                          size: 20,
+                        ),
+                        text: 'Appearance',
+                        height: 48,
+                      ),
+                      Tab(
+                        icon: Icon(
+                          _tabController.index == 2
+                              ? Icons.build
+                              : Icons.build_outlined,
+                          size: 20,
+                        ),
+                        text: 'Tools',
+                        height: 48,
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
-          ),
 
-          // Top Tab Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.xs,
+            const Divider(height: 1),
+
+            // Main Tab Content Area
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Tab 1: Navigation
+                  _buildNavigationTab(context, colorScheme),
+
+                  // Tab 2: Appearance
+                  _buildAppearanceTab(context, colorScheme, config, notifier),
+
+                  // Tab 3: Tools
+                  _buildToolsTab(context, colorScheme),
+                ],
+              ),
             ),
-            child: AnimatedBuilder(
-              animation: _tabController,
-              builder: (context, _) {
-                return TabBar(
-                  controller: _tabController,
-                  indicator: const BoxDecoration(), // Removes the underline completely
-                  dividerColor: Colors.transparent,
-                  labelColor: colorScheme.primary,
-                  unselectedLabelColor: colorScheme.onSurfaceVariant,
-                  labelStyle: TextStyle(
-                    fontSize: AppTypography.xs,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: AppTypography.fontFamily,
-                  ),
-                  unselectedLabelStyle: TextStyle(
-                    fontSize: AppTypography.xs,
-                    fontWeight: FontWeight.w500,
-                    fontFamily: AppTypography.fontFamily,
-                  ),
-                  tabs: [
-                    Tab(
-                      icon: Icon(
-                        _tabController.index == 0
-                            ? Icons.menu_book
-                            : Icons.menu_book_outlined,
-                        size: 20,
-                      ),
-                      text: 'Navigation',
-                      height: 48,
-                    ),
-                    Tab(
-                      icon: Icon(
-                        _tabController.index == 1
-                            ? Icons.palette
-                            : Icons.palette_outlined,
-                        size: 20,
-                      ),
-                      text: 'Appearance',
-                      height: 48,
-                    ),
-                    Tab(
-                      icon: Icon(
-                        _tabController.index == 2
-                            ? Icons.build
-                            : Icons.build_outlined,
-                        size: 20,
-                      ),
-                      text: 'Tools',
-                      height: 48,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-
-          const Divider(height: 1),
-
-          // Main Tab Content Area
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Tab 1: Navigation
-                _buildNavigationTab(context, colorScheme),
-
-                // Tab 2: Appearance
-                _buildAppearanceTab(context, colorScheme, config, notifier),
-
-                // Tab 3: Tools
-                _buildToolsTab(context, colorScheme),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    )));
+    );
   }
 
   Widget _buildNavigationTab(BuildContext context, ColorScheme colorScheme) {
@@ -225,19 +210,27 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
                     final isCurrent = index == widget.currentChapterIndex;
                     final title = widget.chapters[index];
 
-                    return ListTile(
+                    return Material(
+                      type: MaterialType.transparency,
+                      child: ListTile(
                       dense: true,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
                       ),
                       selected: isCurrent,
-                      selectedTileColor: colorScheme.primaryContainer.withValues(alpha: 0.5),
+                      selectedTileColor: colorScheme.secondaryContainer,
                       leading: Text(
                         '${index + 1}',
                         style: TextStyle(
                           fontSize: AppTypography.sm,
-                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                          color: isCurrent ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                          fontWeight: isCurrent
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isCurrent
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
                         ),
                       ),
                       title: Text(
@@ -246,22 +239,20 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: AppTypography.sm,
-                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                          color: isCurrent ? colorScheme.primary : colorScheme.onSurface,
+                          fontWeight: isCurrent
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isCurrent
+                              ? colorScheme.primary
+                              : colorScheme.onSurface,
                         ),
                       ),
-                      trailing: isCurrent
-                          ? Icon(
-                              Icons.bookmark_rounded,
-                              size: 18,
-                              color: colorScheme.primary,
-                            )
-                          : null,
+                      trailing: null,
                       onTap: () {
                         Navigator.of(context).pop();
                         widget.onChapterSelected?.call(index);
                       },
-                    );
+                    ));
                   },
                 ),
         ),
@@ -303,9 +294,7 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
           ],
           selected: {config.mode},
           onSelectionChanged: (Set<ReaderMode> newSelection) {
-            notifier.updateConfig(
-              config.copyWith(mode: newSelection.first),
-            );
+            notifier.updateConfig(config.copyWith(mode: newSelection.first));
           },
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -330,9 +319,7 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
                 isSelected: isSelected,
                 onTap: () {
                   if (!isSelected) {
-                    notifier.updateConfig(
-                      config.copyWith(themePreset: preset),
-                    );
+                    notifier.updateConfig(config.copyWith(themePreset: preset));
                   }
                 },
               );
@@ -389,8 +376,8 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
               icon: const Icon(Icons.remove_circle_outline),
               onPressed: config.fontSize > 12
                   ? () => notifier.updateConfig(
-                        config.copyWith(fontSize: config.fontSize - 1),
-                      )
+                      config.copyWith(fontSize: config.fontSize - 1),
+                    )
                   : null,
             ),
             Expanded(
@@ -409,8 +396,8 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
               icon: const Icon(Icons.add_circle_outline),
               onPressed: config.fontSize < 32
                   ? () => notifier.updateConfig(
-                        config.copyWith(fontSize: config.fontSize + 1),
-                      )
+                      config.copyWith(fontSize: config.fontSize + 1),
+                    )
                   : null,
             ),
           ],
@@ -445,12 +432,14 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
               icon: const Icon(Icons.remove_circle_outline),
               onPressed: config.lineSpacing > 1.05
                   ? () => notifier.updateConfig(
-                        config.copyWith(
-                          lineSpacing: double.parse(
-                            (config.lineSpacing - 0.1).clamp(1.0, 2.5).toStringAsFixed(1),
-                          ),
+                      config.copyWith(
+                        lineSpacing: double.parse(
+                          (config.lineSpacing - 0.1)
+                              .clamp(1.0, 2.5)
+                              .toStringAsFixed(1),
                         ),
-                      )
+                      ),
+                    )
                   : null,
             ),
             Expanded(
@@ -473,12 +462,14 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
               icon: const Icon(Icons.add_circle_outline),
               onPressed: config.lineSpacing < 2.45
                   ? () => notifier.updateConfig(
-                        config.copyWith(
-                          lineSpacing: double.parse(
-                            (config.lineSpacing + 0.1).clamp(1.0, 2.5).toStringAsFixed(1),
-                          ),
+                      config.copyWith(
+                        lineSpacing: double.parse(
+                          (config.lineSpacing + 0.1)
+                              .clamp(1.0, 2.5)
+                              .toStringAsFixed(1),
                         ),
-                      )
+                      ),
+                    )
                   : null,
             ),
           ],
@@ -500,9 +491,7 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
       isSelected: isSelected,
       onTap: () {
         if (!isSelected) {
-          notifier.updateConfig(
-            config.copyWith(fontFamily: fontFamily),
-          );
+          notifier.updateConfig(config.copyWith(fontFamily: fontFamily));
         }
       },
     );

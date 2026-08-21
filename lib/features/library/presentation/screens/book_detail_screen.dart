@@ -44,7 +44,7 @@ class BookDetailScreen extends ConsumerWidget {
               if (value == 'change_category') {
                 showModalBottomSheet(
                   context: context,
-                  backgroundColor: Colors.transparent,
+                  showDragHandle: true,
                   builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
                 );
               } else if (value == 'delete') {

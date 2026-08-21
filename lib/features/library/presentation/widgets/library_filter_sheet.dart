@@ -48,20 +48,16 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
               ],
             ),
             const Divider(height: 1),
-            AnimatedBuilder(
-              animation: _tabController,
-              builder: (context, _) {
-                switch (_tabController.index) {
-                  case 0:
-                    return _buildFilterTab(context, colorScheme);
-                  case 1:
-                    return _buildSortTab(context, colorScheme);
-                  case 2:
-                    return _buildDisplayTab(context, colorScheme);
-                  default:
-                    return const SizedBox.shrink();
-                }
-              },
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.35,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildFilterTab(context, colorScheme),
+                  _buildSortTab(context, colorScheme),
+                  _buildDisplayTab(context, colorScheme),
+                ],
+              ),
             ),
           ],
         ),

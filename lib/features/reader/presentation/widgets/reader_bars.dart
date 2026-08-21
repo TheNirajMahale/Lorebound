@@ -145,7 +145,7 @@ class _ReaderBottomBarState extends ConsumerState<ReaderBottomBar> {
       context: context,
       isScrollControlled: true,
       useRootNavigator: false,
-      backgroundColor: Colors.transparent,
+      showDragHandle: true,
       builder: (context) => ReaderSettingsSheet(
         chapters: widget.chapters,
         currentChapterIndex: widget.currentChapterIndex,
