@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/library_controller.dart';
 import '../widgets/library_filter_sheet.dart';
 import '../widgets/book_card.dart';
@@ -12,6 +11,7 @@ import '../providers/library_preferences_provider.dart';
 import '../providers/library_categories_provider.dart';
 import '../../data/services/epub_import_service.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../providers/library_selection_provider.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -21,10 +21,7 @@ class LibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
-  final Set<int> _selectedBookIds = {};
-  bool get _isSelectionMode => _selectedBookIds.isNotEmpty;
-  
-  bool _isSearchActive = false;
+bool _isSearchActive = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -33,80 +30,37 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     super.dispose();
   }
 
-  void _toggleSelection(int bookId) {
-    setState(() {
-      if (_selectedBookIds.contains(bookId)) {
-        _selectedBookIds.remove(bookId);
-      } else {
-        _selectedBookIds.add(bookId);
-      }
-    });
-  }
-
-  void _clearSelection() {
-    setState(() {
-      _selectedBookIds.clear();
-    });
-  }
-
-  void _selectAll(List<int> allBookIds) {
-    setState(() {
-      _selectedBookIds.addAll(allBookIds);
-    });
-  }
-
-  void _inverseSelection(List<int> allBookIds) {
-    setState(() {
-      final unselected = allBookIds.where((id) => !_selectedBookIds.contains(id)).toList();
-      _selectedBookIds.clear();
-      _selectedBookIds.addAll(unselected);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isSelectionMode = ref.watch(librarySelectionProvider.select((s) => s.isNotEmpty));
     final libraryState = ref.watch(filteredLibraryProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: _isSelectionMode 
-          ? _buildSelectionAppBar(context, colorScheme, libraryState.value?.map((b) => b.id).toList() ?? [])
+      appBar: isSelectionMode 
+          ? SelectionAppBar(allBookIds: libraryState.value?.map((b) => b.id).toList() ?? [])
           : _buildNormalAppBar(context),
       body: libraryState.when(
         data: (books) {
           if (books.isEmpty) {
             return _buildEmptyState(context, colorScheme);
           }
-          final prefs = ref.watch(libraryPreferencesProvider);
+          final displayMode = ref.watch(libraryPreferencesProvider.select((p) => p.displayMode));
           
-          if (prefs.displayMode == DisplayMode.list) {
+          if (displayMode == DisplayMode.list) {
             return ListView.builder(
               padding: const EdgeInsets.all(AppSpacing.md),
               itemCount: books.length,
               itemBuilder: (context, index) {
                 final book = books[index];
-                return BookListTile(
-                  book: book,
-                  isSelected: _selectedBookIds.contains(book.id),
-                  isSelectionMode: _isSelectionMode,
-                  onTap: () {
-                    if (_isSelectionMode) {
-                      _toggleSelection(book.id);
-                    } else {
-                      context.push('/library/book/${book.id}');
-                    }
-                  },
-                  onLongPress: () {
-                    _toggleSelection(book.id);
-                  },
-                );
+                return BookListTile(book: book);
               },
             );
           }
 
-          final crossAxisCount = prefs.displayMode == DisplayMode.compactGrid ? 3 : 2;
-          final childAspectRatio = prefs.displayMode == DisplayMode.compactGrid ? 0.65 : 0.70;
+          final crossAxisCount = displayMode == DisplayMode.compactGrid ? 3 : 2;
+          final childAspectRatio = displayMode == DisplayMode.compactGrid ? 0.65 : 0.70;
 
           return GridView.builder(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -119,28 +73,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             itemCount: books.length,
             itemBuilder: (context, index) {
               final book = books[index];
-              return BookCard(
-                book: book,
-                isSelected: _selectedBookIds.contains(book.id),
-                isSelectionMode: _isSelectionMode,
-                onTap: () {
-                  if (_isSelectionMode) {
-                    _toggleSelection(book.id);
-                  } else {
-                    context.push('/library/book/${book.id}');
-                  }
-                },
-                onLongPress: () {
-                  _toggleSelection(book.id);
-                },
-              );
+              return BookCard(book: book);
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
       ),
-      floatingActionButton: _isSelectionMode ? null : FloatingActionButton(
+      floatingActionButton: isSelectionMode ? null : FloatingActionButton(
         onPressed: () async {
           bool dialogShown = false;
           final service = ref.read(epubImportServiceProvider);
@@ -174,7 +114,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         },
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: _isSelectionMode ? _buildSelectionBottomBar(context, colorScheme) : null,
+      bottomNavigationBar: isSelectionMode ? const SelectionBottomBar() : null,
     );
   }
 
@@ -224,7 +164,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           height: 56.0,
           child: Consumer(
             builder: (context, ref, child) {
-              final prefs = ref.watch(libraryPreferencesProvider);
+              final categoryId = ref.watch(libraryPreferencesProvider.select((p) => p.selectedCategoryId));
               final categoriesState = ref.watch(categoriesProvider);
               
               return ListView(
@@ -233,13 +173,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 children: [
                   ExpressiveChip(
                     label: 'All',
-                    isSelected: prefs.selectedCategoryId == null,
+                    isSelected: categoryId == null,
                     onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
                   ),
                   ...categoriesState.when(
                     data: (categories) => categories.map((cat) => ExpressiveChip(
                       label: cat.name,
-                      isSelected: prefs.selectedCategoryId == cat.id,
+                      isSelected: categoryId == cat.id,
                       onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(cat.id),
                     )).toList(),
                     loading: () => const [Padding(padding: EdgeInsets.all(8.0), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))],
@@ -267,7 +207,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               context: context,
               isScrollControlled: true,
               useRootNavigator: false,
-              backgroundColor: Colors.transparent,
+              showDragHandle: true,
               builder: (context) => const LibraryFilterSheet(),
             );
           },
@@ -293,29 +233,70 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
-  AppBar _buildSelectionAppBar(BuildContext context, ColorScheme colorScheme, List<int> allBookIds) {
+  Widget _buildEmptyState(BuildContext context, ColorScheme colorScheme) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.collections_bookmark_outlined, size: 80, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Your library is empty',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Tap the + button to import an EPUB',
+            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SelectionAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  final List<int> allBookIds;
+  
+  const SelectionAppBar({super.key, required this.allBookIds});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedCount = ref.watch(librarySelectionProvider.select((s) => s.length));
+    
     return AppBar(
       leading: IconButton(
         icon: const Icon(Icons.close),
-        onPressed: _clearSelection,
+        onPressed: () => ref.read(librarySelectionProvider.notifier).clearSelection(),
       ),
-      title: Text('${_selectedBookIds.length} selected'),
+      title: Text('$selectedCount selected'),
       actions: [
         IconButton(
           icon: const Icon(Icons.select_all),
           tooltip: 'Select All',
-          onPressed: () => _selectAll(allBookIds),
+          onPressed: () => ref.read(librarySelectionProvider.notifier).selectAll(allBookIds),
         ),
         IconButton(
-          icon: const Icon(Icons.flip_to_back), // Inverse selection icon
+          icon: const Icon(Icons.flip_to_back),
           tooltip: 'Inverse Selection',
-          onPressed: () => _inverseSelection(allBookIds),
+          onPressed: () => ref.read(librarySelectionProvider.notifier).inverseSelection(allBookIds),
         ),
       ],
     );
   }
 
-  Widget _buildSelectionBottomBar(BuildContext context, ColorScheme colorScheme) {
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class SelectionBottomBar extends ConsumerWidget {
+  const SelectionBottomBar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final selectedBookIds = ref.watch(librarySelectionProvider);
+
     return BottomAppBar(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -326,9 +307,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             onPressed: () {
               showModalBottomSheet(
                 context: context,
-                backgroundColor: Colors.transparent,
-                builder: (context) => AssignCategorySheet(selectedBookIds: _selectedBookIds.toList()),
-              ).then((_) => _clearSelection());
+                showDragHandle: true,
+                builder: (context) => AssignCategorySheet(selectedBookIds: selectedBookIds.toList()),
+              ).then((_) => ref.read(librarySelectionProvider.notifier).clearSelection());
             },
           ),
           IconButton(
@@ -336,8 +317,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             tooltip: 'Mark as read',
             onPressed: () {
               ref.read(libraryControllerProvider.notifier)
-                  .bulkUpdateStatus(_selectedBookIds.toList(), 'READ');
-              _clearSelection();
+                  .bulkUpdateStatus(selectedBookIds.toList(), 'READ');
+              ref.read(librarySelectionProvider.notifier).clearSelection();
             },
           ),
           IconButton(
@@ -345,8 +326,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             tooltip: 'Mark as unread',
             onPressed: () {
               ref.read(libraryControllerProvider.notifier)
-                  .bulkUpdateStatus(_selectedBookIds.toList(), 'WANT_TO_READ', chapter: 0);
-              _clearSelection();
+                  .bulkUpdateStatus(selectedBookIds.toList(), 'WANT_TO_READ', chapter: 0);
+              ref.read(librarySelectionProvider.notifier).clearSelection();
             },
           ),
           IconButton(
@@ -358,7 +339,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             icon: Icon(Icons.delete_outline, color: colorScheme.error),
             tooltip: 'Delete',
             onPressed: () {
-              _showDeleteConfirmationDialog(context);
+              _showDeleteConfirmationDialog(context, ref, selectedBookIds.toList());
             },
           ),
         ],
@@ -366,8 +347,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
-  Future<void> _showDeleteConfirmationDialog(BuildContext context) async {
-    final count = _selectedBookIds.length;
+  Future<void> _showDeleteConfirmationDialog(BuildContext context, WidgetRef ref, List<int> selectedIds) async {
+    final count = selectedIds.length;
     bool deleteLocalFiles = false;
 
     final confirm = await showDialog<bool>(
@@ -410,30 +391,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       ),
     );
 
-    if (confirm == true && mounted) {
-      ref.read(libraryControllerProvider.notifier).bulkDeleteBooks(_selectedBookIds.toList(), deleteLocalFiles: deleteLocalFiles);
-      _clearSelection();
+    if (confirm == true && context.mounted) {
+      ref.read(libraryControllerProvider.notifier).bulkDeleteBooks(selectedIds, deleteLocalFiles: deleteLocalFiles);
+      ref.read(librarySelectionProvider.notifier).clearSelection();
     }
-  }
-
-  Widget _buildEmptyState(BuildContext context, ColorScheme colorScheme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.collections_bookmark_outlined, size: 80, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Your library is empty',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Tap the + button to import an EPUB',
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
   }
 }

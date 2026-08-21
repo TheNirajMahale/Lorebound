@@ -1,58 +1,68 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../domain/models/book.dart';
+import '../providers/library_selection_provider.dart';
 
-class BookCard extends StatelessWidget {
+class BookCard extends ConsumerWidget {
   final Book book;
-  final bool isSelected;
-  final bool isSelectionMode;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
 
   const BookCard({
     super.key,
     required this.book,
-    required this.isSelected,
-    required this.isSelectionMode,
-    required this.onTap,
-    required this.onLongPress,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
     final unreadCount = book.totalChapters - book.currentChapter;
     final progress = book.totalChapters > 0 ? book.currentChapter / book.totalChapters : 0.0;
+    
+    final isSelected = ref.watch(librarySelectionProvider.select((s) => s.contains(book.id)));
+    final isSelectionMode = ref.watch(librarySelectionProvider.select((s) => s.isNotEmpty));
 
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Stack(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    image: book.coverPath != null && book.coverPath!.isNotEmpty
-                        ? DecorationImage(
-                            image: FileImage(File(book.coverPath!)),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  clipBehavior: Clip.antiAlias,
+    void handleTap() {
+      if (isSelectionMode) {
+        ref.read(librarySelectionProvider.notifier).toggleSelection(book.id);
+      } else {
+        context.push('/library/book/${book.id}');
+      }
+    }
+
+    void handleLongPress() {
+      ref.read(librarySelectionProvider.notifier).toggleSelection(book.id);
+    }
+
+    return Stack(
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                ),
+                margin: EdgeInsets.zero, // M3 Cards have default margin, but we want grid spacing
+                elevation: isSelected ? 1 : 0, // slight elevation on select
+                child: InkWell(
+                  onTap: handleTap,
+                  onLongPress: handleLongPress,
                   child: Stack(
+                    fit: StackFit.expand,
                     children: [
-                      if (book.coverPath == null || book.coverPath!.isEmpty)
+                      if (book.coverPath != null && book.coverPath!.isNotEmpty)
+                        Image.file(
+                          File(book.coverPath!),
+                          fit: BoxFit.cover,
+                        )
+                      else
                         Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -105,42 +115,42 @@ class BookCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                book.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: AppTypography.sm,
-                  fontWeight: FontWeight.w500,
-                  height: 1.2,
-                ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              book.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: AppTypography.sm,
+                fontWeight: FontWeight.w500,
+                height: 1.2,
               ),
-            ],
-          ),
-          // Unread Badge
-          if (unreadCount > 0)
-            Positioned(
-              top: AppSpacing.xs,
-              left: AppSpacing.xs,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-                child: Text(
-                  unreadCount.toString(),
-                  style: TextStyle(
-                    color: colorScheme.onPrimary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
+            ),
+          ],
+        ),
+        // Unread Badge
+        if (unreadCount > 0)
+          Positioned(
+            top: AppSpacing.xs,
+            left: AppSpacing.xs,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              ),
+              child: Text(
+                unreadCount.toString(),
+                style: TextStyle(
+                  color: colorScheme.onPrimary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

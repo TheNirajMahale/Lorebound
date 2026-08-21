@@ -1,28 +1,26 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/models/book.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../providers/library_selection_provider.dart';
 
-class BookListTile extends StatelessWidget {
+class BookListTile extends ConsumerWidget {
   final Book book;
-  final bool isSelected;
-  final bool isSelectionMode;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
 
   const BookListTile({
     super.key,
     required this.book,
-    required this.isSelected,
-    required this.isSelectionMode,
-    required this.onTap,
-    required this.onLongPress,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    
+    final isSelected = ref.watch(librarySelectionProvider.select((s) => s.contains(book.id)));
+    final isSelectionMode = ref.watch(librarySelectionProvider.select((s) => s.isNotEmpty));
     
     // Calculate progress safely
     double progressValue = 0.0;
@@ -33,10 +31,22 @@ class BookListTile extends StatelessWidget {
         progressValue = book.currentChapter / book.totalChapters;
       }
     }
+    
+    void handleTap() {
+      if (isSelectionMode) {
+        ref.read(librarySelectionProvider.notifier).toggleSelection(book.id);
+      } else {
+        context.push('/library/book/${book.id}');
+      }
+    }
+
+    void handleLongPress() {
+      ref.read(librarySelectionProvider.notifier).toggleSelection(book.id);
+    }
 
     return InkWell(
-      onTap: onTap,
-      onLongPress: onLongPress,
+      onTap: handleTap,
+      onLongPress: handleLongPress,
       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -134,7 +144,7 @@ class BookListTile extends StatelessWidget {
                 padding: const EdgeInsets.only(left: AppSpacing.sm),
                 child: Checkbox(
                   value: isSelected,
-                  onChanged: (val) => onTap(),
+                  onChanged: (val) => handleTap(),
                 ),
               ),
           ],

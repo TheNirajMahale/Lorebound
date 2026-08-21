@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/library_categories_provider.dart';
-import '../../../../core/theme/app_spacing.dart';
 
 class CategoryManagementDialog extends ConsumerStatefulWidget {
   const CategoryManagementDialog({super.key});

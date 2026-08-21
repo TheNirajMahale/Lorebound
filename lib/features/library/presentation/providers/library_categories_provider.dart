@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/local_book_repository.dart';
 import '../../data/local/app_database.dart';
-import 'package:drift/drift.dart' as drift;
 
 final categoriesProvider = StreamProvider<List<CategoryEntity>>((ref) {
   final repo = ref.watch(localBookRepositoryProvider);

@@ -30,29 +30,12 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Material(
-      color: colorScheme.surface,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppSpacing.radiusXl),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag Handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.xs),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            TabBar(
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TabBar(
               controller: _tabController,
               indicator: const BoxDecoration(), // Remove underline
               labelColor: colorScheme.primary,
@@ -82,8 +65,7 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildFilterTab(BuildContext context, ColorScheme colorScheme) {

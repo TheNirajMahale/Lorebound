@@ -15,31 +15,13 @@ class AssignCategorySheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesState = ref.watch(categoriesProvider);
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
-    return Material(
-      color: colorScheme.surface,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(AppSpacing.radiusXl),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Drag Handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: AppSpacing.sm, bottom: AppSpacing.md),
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Padding(
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
                 children: [
@@ -100,7 +82,6 @@ class AssignCategorySheet extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
           ],
         ),
-      ),
-    );
+      );
   }
 }
