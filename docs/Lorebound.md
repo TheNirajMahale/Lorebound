@@ -186,7 +186,7 @@ Rebuilt the core reader using a 100% Native Flutter engine instead of clunky Web
 - **Cross-Mode Position Sync:** Real-time fractional progress tracking with 1-page context overlap buffer.
 - **3-Tab Bottom Card:** Navigation TOC (direct chapter jumping), Appearance controls (steppers, sliders, chips, theme presets), Tools.
 
-### Phase 2: Local Library (In Progress)
+### Phase 2: Local Library (Completed)
 Build the offline book management library and local database.
 - **Step 1 — Data Layer:**
   - `file_picker` integration for selecting `.epub` files from device storage.
@@ -198,7 +198,7 @@ Build the offline book management library and local database.
 - **Step 3 — State Layer (Riverpod):**
   - `LibraryController` (`AsyncNotifier`): Handles importing, listing, sorting (Recent, Title, Author), searching, and deleting books.
 - **Step 4 — Presentation Layer (UI):**
-  - **Library Screen:** Grid and List toggle view of imported books with high-res cover art, reading progress indicator bars, and sort/filter bar.
+  - **Library Screen:** Grid and List toggle view, selection mode for batch actions (delete, categorize, mark read), animated inline search, and sort/filter bar.
   - **Empty State & FAB:** Premium empty-state illustration + Floating Action Button to "Import Book".
   - **Book Details Sheet/Page:** Quick modal showing book metadata, reading stats, and "Resume Reading" / "Read Chapter 1" buttons.
   - **Seamless Navigation:** Tapping any book opens `ReaderScreen` with the selected book file path.
@@ -207,9 +207,10 @@ Build the offline book management library and local database.
   - `LibrarySettingsScreen`: Chapter swipe actions configuration.
   - `ReaderSettingsScreen`: Tab ordering and global text alignment, font weight, and expanded font options.
   - `DataStorageSettingsScreen`: CSV/JSON export dialog.
+  - **Search:** Universal inline search across all settings.
 - **Step 6 — History & Tracking:**
   - `ReadingHistories` schema table.
-  - `HistoryScreen`: Date-grouped list view with fast swipe-to-delete.
+  - `HistoryScreen`: Date-grouped list view with fast swipe-to-delete, batch clear history, and inline search.
   - Wire-up with `ReaderScreen` to automatically log chapter changes (respecting `Incognito Mode`).
 
 ### Phase 3: Authentication
