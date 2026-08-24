@@ -19,7 +19,10 @@ class LibrarySettingsScreen extends ConsumerWidget {
             subtitle: const Text('Where new books are added'),
             trailing: const Text('Default'),
             onTap: () {
-              // TODO: Implement category dropdown dialog
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+              );
             },
           ),
           const Divider(),

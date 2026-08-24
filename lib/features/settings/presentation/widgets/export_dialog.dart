@@ -92,7 +92,10 @@ class _ExportDialogState extends State<ExportDialog> {
               icon: const Icon(Icons.download),
               label: const Text('Export'),
               onPressed: () {
-                // TODO: Implement export logic
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+                );
                 Navigator.of(context).pop();
               },
             ),

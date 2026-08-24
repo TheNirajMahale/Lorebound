@@ -228,7 +228,12 @@ class BookDetailScreen extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.sm),
                   IconButton.filledTonal(
                     icon: const Icon(Icons.download),
-                    onPressed: () {},
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+                      );
+                    },
                   ),
                 ],
               ),

@@ -293,7 +293,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
-              useRootNavigator: false,
+              useRootNavigator: true,
               showDragHandle: true,
               builder: (context) => const LibraryFilterSheet(),
             );
@@ -391,7 +391,12 @@ class SelectionBottomBar extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.download_outlined),
             tooltip: 'Download',
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+              );
+            },
           ),
           IconButton(
             icon: Icon(Icons.delete_outline, color: colorScheme.error),

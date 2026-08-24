@@ -128,7 +128,10 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             title: const Text('App language'),
             subtitle: const Text('English'),
             onTap: () {
-              // TODO: Implement language picker
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+              );
             },
           ),
           
@@ -136,7 +139,10 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             title: const Text('Date format'),
             subtitle: const Text('Default'),
             onTap: () {
-              // TODO: Implement date format picker
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+              );
             },
           ),
         ],

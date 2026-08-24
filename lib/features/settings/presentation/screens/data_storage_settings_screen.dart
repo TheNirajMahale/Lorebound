@@ -19,7 +19,10 @@ class DataStorageSettingsScreen extends ConsumerWidget {
             title: const Text('Storage location'),
             subtitle: const Text('/storage/emulated/0/Lorebound'),
             onTap: () {
-              // TODO: Implement file_picker
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+              );
             },
           ),
           ListTile(

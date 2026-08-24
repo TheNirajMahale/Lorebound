@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/book.dart';
 import 'library_controller.dart';
 import 'library_categories_provider.dart';
+import '../../../../core/providers/shared_prefs_provider.dart';
 
 enum SortType { title, lastRead, dateAdded }
 enum FilterState { include, exclude, unselected }
@@ -56,19 +57,53 @@ class LibraryPreferences {
 }
 
 class LibraryPreferencesNotifier extends Notifier<LibraryPreferences> {
+  static const _sortTypeKey = 'library_sort_type';
+  static const _isAscendingKey = 'library_is_ascending';
+  static const _displayModeKey = 'library_display_mode';
+  static const _itemsPerRowKey = 'library_items_per_row';
+
   @override
-  LibraryPreferences build() => const LibraryPreferences();
+  LibraryPreferences build() {
+    final prefs = ref.watch(sharedPrefsProvider);
+    
+    final sortTypeIndex = prefs.getInt(_sortTypeKey);
+    final sortType = sortTypeIndex != null && sortTypeIndex < SortType.values.length
+        ? SortType.values[sortTypeIndex]
+        : SortType.dateAdded;
+
+    final isAscending = prefs.getBool(_isAscendingKey) ?? false;
+
+    final displayModeIndex = prefs.getInt(_displayModeKey);
+    final displayMode = displayModeIndex != null && displayModeIndex < DisplayMode.values.length
+        ? DisplayMode.values[displayModeIndex]
+        : DisplayMode.comfortableGrid;
+
+    final itemsPerRow = prefs.getInt(_itemsPerRowKey) ?? 2;
+
+    return LibraryPreferences(
+      sortType: sortType,
+      isAscending: isAscending,
+      displayMode: displayMode,
+      itemsPerRow: itemsPerRow,
+    );
+  }
 
   void updateSearchQuery(String query) {
     state = state.copyWith(searchQuery: query);
   }
 
   void updateSortType(SortType sortType, {bool? isAscending}) {
-    state = state.copyWith(sortType: sortType, isAscending: isAscending ?? state.isAscending);
+    final newIsAscending = isAscending ?? state.isAscending;
+    state = state.copyWith(sortType: sortType, isAscending: newIsAscending);
+    final prefs = ref.read(sharedPrefsProvider);
+    prefs.setInt(_sortTypeKey, sortType.index);
+    prefs.setBool(_isAscendingKey, newIsAscending);
   }
 
   void toggleSortDirection() {
-    state = state.copyWith(isAscending: !state.isAscending);
+    final newIsAscending = !state.isAscending;
+    state = state.copyWith(isAscending: newIsAscending);
+    ref.read(sharedPrefsProvider).setBool(_isAscendingKey, newIsAscending);
   }
 
   void updateReadFilter(FilterState filter) {
@@ -85,10 +120,12 @@ class LibraryPreferencesNotifier extends Notifier<LibraryPreferences> {
 
   void updateDisplayMode(DisplayMode mode) {
     state = state.copyWith(displayMode: mode);
+    ref.read(sharedPrefsProvider).setInt(_displayModeKey, mode.index);
   }
 
   void updateItemsPerRow(int items) {
     state = state.copyWith(itemsPerRow: items);
+    ref.read(sharedPrefsProvider).setInt(_itemsPerRowKey, items);
   }
   
   void updateSelectedCategoryId(int? categoryId) {

@@ -94,13 +94,19 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
                         IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () {
-                            // TODO: Implement delete with confirmation
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+                            );
                           },
                         ),
                     ],
                   ),
                   onTap: isAll ? null : () {
-                    // TODO: Implement rename dialog
+                    ScaffoldMessenger.of(context).clearSnackBars();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+                    );
                   },
                 ),
               );
@@ -112,7 +118,10 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Implement add category dialog
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+          );
         },
         child: const Icon(Icons.add),
       ),
