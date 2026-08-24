@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:archive/archive.dart';
 import 'package:lorebound/features/reader/data/services/epub_parser_service.dart';
+import 'package:lorebound/features/reader/data/services/epub_cache_service.dart';
 
 void main() {
   test('direct zip rescue test with mock in-memory archive', () async {

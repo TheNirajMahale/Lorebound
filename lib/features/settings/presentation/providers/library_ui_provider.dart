@@ -67,3 +67,28 @@ final allCategoryIndexProvider = NotifierProvider<AllCategoryIndexNotifier, int>
 final hiddenCategoriesProvider = NotifierProvider<HiddenCategoriesNotifier, List<int>>(() {
   return HiddenCategoriesNotifier();
 });
+
+class DefaultCategoryNotifier extends Notifier<int?> {
+  static const _key = 'default_category_id';
+
+  @override
+  int? build() {
+    final prefs = ref.watch(sharedPrefsProvider);
+    final val = prefs.getInt(_key);
+    return val == -1 ? null : val;
+  }
+
+  void set(int? categoryId) {
+    state = categoryId;
+    final prefs = ref.read(sharedPrefsProvider);
+    if (categoryId == null) {
+      prefs.setInt(_key, -1);
+    } else {
+      prefs.setInt(_key, categoryId);
+    }
+  }
+}
+
+final defaultCategoryProvider = NotifierProvider<DefaultCategoryNotifier, int?>(() {
+  return DefaultCategoryNotifier();
+});

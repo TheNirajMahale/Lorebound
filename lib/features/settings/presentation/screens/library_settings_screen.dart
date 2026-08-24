@@ -2,13 +2,75 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/chapter_swipe_config.dart';
 import '../providers/chapter_swipe_provider.dart';
+import '../../../library/presentation/providers/library_categories_provider.dart';
+import '../providers/library_ui_provider.dart';
 
 class LibrarySettingsScreen extends ConsumerWidget {
   const LibrarySettingsScreen({super.key});
 
+  Future<void> _showDefaultCategoryPicker(BuildContext context, WidgetRef ref) async {
+    final categoriesState = ref.read(categoriesProvider);
+    final defaultId = ref.read(defaultCategoryProvider);
+
+    await categoriesState.whenOrNull(
+      data: (categories) async {
+        final result = await showDialog<int?>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Default Category'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RadioListTile<int?>(
+                      title: const Text('All Books (Default)'),
+                      value: null,
+                      groupValue: defaultId,
+                      onChanged: (val) => Navigator.pop(context, val),
+                    ),
+                    ...categories.map((c) {
+                      return RadioListTile<int?>(
+                        title: Text(c.name),
+                        value: c.id,
+                        groupValue: defaultId,
+                        onChanged: (val) => Navigator.pop(context, val),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, defaultId), // Cancel
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (result != defaultId) {
+          ref.read(defaultCategoryProvider.notifier).set(result);
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final swipeConfig = ref.watch(chapterSwipeProvider);
+    final defaultCatId = ref.watch(defaultCategoryProvider);
+    
+    // Find the name of the default category
+    final categoriesState = ref.watch(categoriesProvider);
+    String defaultCatName = 'All Books';
+    if (defaultCatId != null) {
+      categoriesState.whenData((categories) {
+        final match = categories.where((c) => c.id == defaultCatId).firstOrNull;
+        if (match != null) defaultCatName = match.name;
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Library')),
@@ -17,12 +79,9 @@ class LibrarySettingsScreen extends ConsumerWidget {
           ListTile(
             title: const Text('Default category'),
             subtitle: const Text('Where new books are added'),
-            trailing: const Text('Default'),
+            trailing: Text(defaultCatName),
             onTap: () {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
-              );
+              _showDefaultCategoryPicker(context, ref);
             },
           ),
           const Divider(),

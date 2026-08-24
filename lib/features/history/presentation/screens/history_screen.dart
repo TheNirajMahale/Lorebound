@@ -210,14 +210,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(4),
-          image: entry.bookCoverPath != null && entry.bookCoverPath!.isNotEmpty
+          image: entry.bookCoverPath != null && entry.bookCoverPath!.isNotEmpty && File(entry.bookCoverPath!).existsSync()
               ? DecorationImage(
                   image: FileImage(File(entry.bookCoverPath!)),
                   fit: BoxFit.cover,
                 )
               : null,
         ),
-        child: entry.bookCoverPath == null || entry.bookCoverPath!.isEmpty
+        child: entry.bookCoverPath == null || entry.bookCoverPath!.isEmpty || !File(entry.bookCoverPath!).existsSync()
             ? Icon(Icons.book, size: 20, color: colorScheme.onSurfaceVariant)
             : null,
       ),

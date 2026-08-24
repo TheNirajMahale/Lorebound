@@ -28,7 +28,7 @@ class EpubImportService {
 
   EpubImportService(this._repository, this._parserService, this._cacheService);
 
-  Future<bool> pickAndImportEpub({void Function(int count)? onStartImporting}) async {
+  Future<List<int>> pickAndImportEpub({void Function(int count)? onStartImporting}) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -37,12 +37,12 @@ class EpubImportService {
       );
 
       if (result == null || result.files.isEmpty) {
-        return false; // User canceled
+        return []; // User canceled
       }
 
       onStartImporting?.call(result.files.length);
 
-      bool anySuccess = false;
+      List<int> importedBookIds = [];
 
       for (final pickedFile in result.files) {
         final sourcePath = pickedFile.path;
@@ -126,16 +126,16 @@ class EpubImportService {
           _parserService.cacheBook(destFile.path, epubBook); // RAM
           await _cacheService.saveToCache(bookId, epubBook); // Disk
 
-          anySuccess = true;
+          importedBookIds.add(bookId);
         } catch (e) {
           debugPrint('Failed to import EPUB file $sourcePath: $e');
         }
       }
 
-      return anySuccess;
+      return importedBookIds;
     } catch (e) {
       debugPrint('Failed to open file picker: $e');
-      return false;
+      return [];
     }
   }
 }

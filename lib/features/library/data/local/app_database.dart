@@ -79,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -96,8 +96,14 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(books, books.chaptersJson);
         }
         if (from < 4) {
-          await m.createTable(readingHistories);
-          await m.createTable(userPreferences);
+          try { await m.createTable(readingHistories); } catch (_) {}
+          try { await m.createTable(userPreferences); } catch (_) {}
+        }
+        if (from < 5) {
+          // If the user already had version 4 before these tables were added to the code,
+          // they would have missed the from < 4 migration. We catch errors in case they didn't.
+          try { await m.createTable(readingHistories); } catch (_) {}
+          try { await m.createTable(userPreferences); } catch (_) {}
         }
       },
       beforeOpen: (details) async {

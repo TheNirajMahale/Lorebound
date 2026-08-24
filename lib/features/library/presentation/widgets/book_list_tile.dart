@@ -55,7 +55,7 @@ class BookListTile extends ConsumerWidget {
           color: isSelected ? colorScheme.primaryContainer.withValues(alpha: 0.5) : Colors.transparent,
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           border: isSelected 
-            ? Border.all(color: colorScheme.primary, width: 2)
+            ? Border.all(color: colorScheme.primary, width: 3)
             : Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
         ),
         child: Row(

@@ -91,7 +91,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           onPressed: () async {
             bool dialogShown = false;
             final service = ref.read(epubImportServiceProvider);
-            final success = await service.pickAndImportEpub(
+            final importedBookIds = await service.pickAndImportEpub(
               onStartImporting: (count) {
                 dialogShown = true;
                 showDialog(
@@ -115,8 +115,52 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               Navigator.of(context, rootNavigator: true).pop();
             }
 
-            if (success) {
+            if (importedBookIds.isNotEmpty) {
               ref.read(libraryControllerProvider.notifier).refresh();
+              
+              final currentCatId = ref.read(effectiveCategoryIdProvider);
+              final defaultCatId = ref.read(defaultCategoryProvider);
+              final categoriesState = ref.read(categoriesProvider);
+
+              int? targetCategoryId;
+
+              if (currentCatId != null) {
+                String currentCatName = 'this category';
+                categoriesState.whenData((categories) {
+                  final match = categories.where((c) => c.id == currentCatId).firstOrNull;
+                  if (match != null) currentCatName = match.name;
+                });
+
+                final shouldAssign = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Assign Category'),
+                    content: Text('Do you want to assign the imported book(s) to "$currentCatName"?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('No'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Yes'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (shouldAssign == true) {
+                  targetCategoryId = currentCatId;
+                } else {
+                  targetCategoryId = defaultCatId;
+                }
+              } else {
+                targetCategoryId = defaultCatId;
+              }
+
+              if (targetCategoryId != null) {
+                ref.read(categoryManagementProvider.notifier).assignBooksToCategory(importedBookIds, targetCategoryId, true);
+              }
             }
           },
           child: const Icon(Icons.add),
@@ -161,7 +205,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     chips.insert(
                       safeIndex,
                       ExpressiveChip(
-                        label: 'All',
+                        label: 'All Books',
                         isSelected: categoryId == null,
                         onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
                       ),
@@ -175,7 +219,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ];
                   if (showAllCat) {
                     chips.insert(0, ExpressiveChip(
-                      label: 'All',
+                      label: 'All Books',
                       isSelected: categoryId == null,
                       onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
                     ));
@@ -184,7 +228,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 },
                 error: (_, __) => showAllCat ? [
                   ExpressiveChip(
-                    label: 'All',
+                    label: 'All Books',
                     isSelected: categoryId == null,
                     onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
                   )

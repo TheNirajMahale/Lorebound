@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../local/app_database.dart';
 import '../local/database_provider.dart';
+import 'dart:convert';
 import 'package:drift/drift.dart' as drift;
 final localBookRepositoryProvider = Provider<LocalBookRepository>((ref) {
   return LocalBookRepository(ref.watch(appDatabaseProvider));
@@ -170,5 +171,20 @@ class LocalBookRepository {
     await _db.into(_db.userPreferences).insertOnConflictUpdate(
       UserPreferenceEntity(key: key, value: value)
     );
+  }
+
+  Future<String> exportLibraryJson() async {
+    final allBooks = await _db.select(_db.books).get();
+    final allCategories = await _db.select(_db.categories).get();
+    final allBookCategories = await _db.select(_db.bookCategories).get();
+
+    final data = {
+      'books': allBooks.map((b) => b.toJson()).toList(),
+      'categories': allCategories.map((c) => c.toJson()).toList(),
+      'book_categories': allBookCategories.map((bc) => bc.toJson()).toList(),
+      'exported_at': DateTime.now().toIso8601String(),
+    };
+
+    return jsonEncode(data);
   }
 }

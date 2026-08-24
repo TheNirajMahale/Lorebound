@@ -99,14 +99,15 @@ class BookCacheManagementScreen extends ConsumerWidget {
                     final item = cacheList[index];
                     final hasCover = item.book.coverPath != null && File(item.book.coverPath!).existsSync();
                     return ListTile(
-                      leading: hasCover
-                          ? Image.file(
-                              File(item.book.coverPath!),
-                              width: 40,
-                              height: 60,
-                              fit: BoxFit.cover,
-                            )
-                          : const Icon(Icons.book, size: 40),
+                        leading: hasCover
+                            ? Image.file(
+                                File(item.book.coverPath!),
+                                width: 40,
+                                height: 60,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40),
+                              )
+                            : const Icon(Icons.book, size: 40),
                       title: Text(item.book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                       subtitle: Text(_formatSize(item.cacheSizeBytes)),
                       trailing: IconButton(

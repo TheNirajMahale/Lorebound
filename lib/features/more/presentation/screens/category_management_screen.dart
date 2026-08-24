@@ -91,7 +91,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
                       items: [
                         const DropdownMenuItem<int?>(
                           value: null,
-                          child: Text('Unassign (keep in "All")'),
+                          child: Text('Unassign (keep in "All Books")'),
                         ),
                         ...otherCategories.map((c) {
                           return DropdownMenuItem<int?>(
@@ -145,7 +145,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
           final safeIndex = allCategoryIndex.clamp(0, combined.length);
           
           // Use a custom map or object for the All category since CategoryEntity requires strict args
-          final allCategoryPlaceholder = {'id': -1, 'name': 'All'};
+          final allCategoryPlaceholder = {'id': -1, 'name': 'All Books'};
           combined.insert(safeIndex, allCategoryPlaceholder);
           
           return ReorderableListView.builder(
@@ -178,7 +178,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
               final category = combined[index];
               final isAll = category is Map && category['id'] == -1;
               final id = isAll ? -1 : category.id;
-              final name = isAll ? 'All' : category.name;
+              final name = isAll ? 'All Books' : category.name;
               
               final isVisible = isAll ? showAllCat : !hiddenCategories.contains(id);
               

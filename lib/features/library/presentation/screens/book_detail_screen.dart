@@ -124,14 +124,14 @@ class BookDetailScreen extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                      image: book.coverPath != null && book.coverPath!.isNotEmpty
+                      image: book.coverPath != null && book.coverPath!.isNotEmpty && File(book.coverPath!).existsSync()
                           ? DecorationImage(
                               image: FileImage(File(book.coverPath!)),
                               fit: BoxFit.cover,
                             )
                           : null,
                     ),
-                    child: book.coverPath == null || book.coverPath!.isEmpty
+                    child: book.coverPath == null || book.coverPath!.isEmpty || !File(book.coverPath!).existsSync()
                         ? Center(
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),

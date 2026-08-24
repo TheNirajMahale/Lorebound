@@ -15,6 +15,35 @@ class BookCard extends ConsumerWidget {
     required this.book,
   });
 
+  Widget _buildFallbackCover() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            HSLColor.fromAHSL(1.0, (book.title.hashCode.abs() % 360).toDouble(), 0.7, 0.3).toColor(),
+            HSLColor.fromAHSL(1.0, ((book.title.hashCode.abs() + 90) % 360).toDouble(), 0.8, 0.4).toColor(),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          child: Text(
+            book.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: AppTypography.sm,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -40,94 +69,72 @@ class BookCard extends ConsumerWidget {
 
     return Stack(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                ),
-                margin: EdgeInsets.zero, // M3 Cards have default margin, but we want grid spacing
-                elevation: isSelected ? 1 : 0, // slight elevation on select
-                child: InkWell(
-                  onTap: handleTap,
-                  onLongPress: handleLongPress,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (book.coverPath != null && book.coverPath!.isNotEmpty)
-                        Image.file(
-                          File(book.coverPath!),
-                          fit: BoxFit.cover,
-                        )
-                      else
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                HSLColor.fromAHSL(1.0, (book.title.hashCode.abs() % 360).toDouble(), 0.7, 0.3).toColor(),
-                                HSLColor.fromAHSL(1.0, ((book.title.hashCode.abs() + 90) % 360).toDouble(), 0.8, 0.4).toColor(),
-                              ],
-                            ),
-                          ),
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(AppSpacing.sm),
-                              child: Text(
-                                book.title,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: AppTypography.sm,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            side: isSelected ? BorderSide(color: colorScheme.primary, width: 3) : BorderSide.none,
+          ),
+          margin: EdgeInsets.zero,
+          elevation: isSelected ? 2 : 0,
+          color: isSelected ? colorScheme.primary : theme.cardColor,
+          child: InkWell(
+            onTap: handleTap,
+            onLongPress: handleLongPress,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (book.coverPath != null && book.coverPath!.isNotEmpty && File(book.coverPath!).existsSync())
+                          Image.file(
+                            File(book.coverPath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildFallbackCover(),
+                          )
+                        else
+                          _buildFallbackCover(),
+                        // Progress bar at the bottom edge of the cover
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            backgroundColor: Colors.transparent,
+                            minHeight: 4,
+                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                           ),
                         ),
-                      // Progress bar at the bottom edge of the cover
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: Colors.transparent,
-                          minHeight: 4,
-                          valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
-                        ),
-                      ),
-                      // Selection Scrim
-                      if (isSelected)
-                        Container(
-                          color: colorScheme.primary.withValues(alpha: 0.4),
-                          child: Center(
-                            child: Icon(
-                              Icons.check_circle,
-                              color: colorScheme.onPrimary,
-                              size: 40,
-                            ),
+                        // Selection Scrim
+                        if (isSelected)
+                          Container(
+                            color: colorScheme.primary.withValues(alpha: 0.4),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(AppSpacing.xs, AppSpacing.xs, AppSpacing.xs, AppSpacing.xs),
+                  color: isSelected ? colorScheme.primary : Colors.transparent,
+                  child: Text(
+                    book.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+                      fontSize: AppTypography.sm,
+                      fontWeight: FontWeight.w500,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              book.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: AppTypography.sm,
-                fontWeight: FontWeight.w500,
-                height: 1.2,
-              ),
-            ),
-          ],
+          ),
         ),
         // Unread Badge
         if (unreadCount > 0)

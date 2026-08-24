@@ -331,20 +331,28 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildFontChip('Default (Sans)', 'Inter', config, notifier),
-              const SizedBox(width: AppSpacing.sm),
-              _buildFontChip('Serif', 'Lora', config, notifier),
-              const SizedBox(width: AppSpacing.sm),
-              _buildFontChip('Monospace', 'Fira Code', config, notifier),
-              const SizedBox(width: AppSpacing.sm),
-              _buildFontChip('Outfit', 'Outfit', config, notifier),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFontChip('Inter', 'Inter', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Lora', 'Lora', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Fira Code', 'Fira Code', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Outfit', 'Outfit', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Merriweather', 'Merriweather', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Playfair', 'Playfair Display', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Comic Neue', 'Comic Neue', config, notifier),
+                const SizedBox(width: AppSpacing.sm),
+                _buildFontChip('Nunito', 'Nunito', config, notifier),
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: AppSpacing.lg),
         
         // Font Weight
