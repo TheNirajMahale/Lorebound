@@ -12,6 +12,120 @@ class CategoryManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScreen> {
+  Future<void> _showAddCategoryDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New Category'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Category Name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty && mounted) {
+      ref.read(categoryManagementProvider.notifier).createCategory(result);
+    }
+  }
+
+  Future<void> _showRenameCategoryDialog(BuildContext context, int id, String currentName) async {
+    final controller = TextEditingController(text: currentName);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Category'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Category Name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty && result != currentName && mounted) {
+      ref.read(categoryManagementProvider.notifier).renameCategory(id, result);
+    }
+  }
+
+  Future<void> _showDeleteCategoryDialog(BuildContext context, int id, String name, List<dynamic> allCategories) async {
+    final otherCategories = allCategories.where((c) => c is! Map && c.id != id).toList();
+    int? selectedReassignId;
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Delete Category'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Are you sure you want to delete "$name"?'),
+                  if (otherCategories.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    const Text('What should happen to the books in this category?'),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<int?>(
+                      value: selectedReassignId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('Unassign (keep in "All")'),
+                        ),
+                        ...otherCategories.map((c) {
+                          return DropdownMenuItem<int?>(
+                            value: (c as dynamic).id as int,
+                            child: Text('Reassign to "${c.name}"'),
+                          );
+                        }),
+                      ],
+                      onChanged: (val) {
+                        setState(() => selectedReassignId = val);
+                      },
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                  child: const Text('Delete'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+
+    if (result == true && mounted) {
+      ref.read(categoryManagementProvider.notifier).deleteAndReassignCategory(id, selectedReassignId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final categoriesState = ref.watch(categoriesProvider);
@@ -94,19 +208,13 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
                         IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () {
-                            ScaffoldMessenger.of(context).clearSnackBars();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
-                            );
+                            _showDeleteCategoryDialog(context, id, name, combined);
                           },
                         ),
                     ],
                   ),
                   onTap: isAll ? null : () {
-                    ScaffoldMessenger.of(context).clearSnackBars();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
-                    );
+                    _showRenameCategoryDialog(context, id, name);
                   },
                 ),
               );
@@ -118,10 +226,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).clearSnackBars();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
-          );
+          _showAddCategoryDialog(context);
         },
         child: const Icon(Icons.add),
       ),

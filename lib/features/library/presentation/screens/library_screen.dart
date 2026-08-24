@@ -137,7 +137,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         height: 56.0,
         child: Consumer(
           builder: (context, ref, child) {
-            final categoryId = ref.watch(libraryPreferencesProvider.select((p) => p.selectedCategoryId));
+            final categoryId = ref.watch(effectiveCategoryIdProvider);
             final categoriesState = ref.watch(categoriesProvider);
             final showAllCat = ref.watch(showAllCategoryProvider);
             final allCatIndex = ref.watch(allCategoryIndexProvider);

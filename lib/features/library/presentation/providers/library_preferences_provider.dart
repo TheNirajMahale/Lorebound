@@ -3,6 +3,7 @@ import '../../domain/models/book.dart';
 import 'library_controller.dart';
 import 'library_categories_provider.dart';
 import '../../../../core/providers/shared_prefs_provider.dart';
+import '../../../settings/presentation/providers/library_ui_provider.dart';
 
 enum SortType { title, lastRead, dateAdded }
 enum FilterState { include, exclude, unselected }
@@ -61,6 +62,8 @@ class LibraryPreferencesNotifier extends Notifier<LibraryPreferences> {
   static const _isAscendingKey = 'library_is_ascending';
   static const _displayModeKey = 'library_display_mode';
   static const _itemsPerRowKey = 'library_items_per_row';
+  static const _selectedCategoryKey = 'library_selected_category_id';
+
 
   @override
   LibraryPreferences build() {
@@ -79,12 +82,16 @@ class LibraryPreferencesNotifier extends Notifier<LibraryPreferences> {
         : DisplayMode.comfortableGrid;
 
     final itemsPerRow = prefs.getInt(_itemsPerRowKey) ?? 2;
+    
+    final catId = prefs.getInt(_selectedCategoryKey);
+    final selectedCategoryId = catId == -1 ? null : catId;
 
     return LibraryPreferences(
       sortType: sortType,
       isAscending: isAscending,
       displayMode: displayMode,
       itemsPerRow: itemsPerRow,
+      selectedCategoryId: selectedCategoryId,
     );
   }
 
@@ -130,6 +137,7 @@ class LibraryPreferencesNotifier extends Notifier<LibraryPreferences> {
   
   void updateSelectedCategoryId(int? categoryId) {
     state = state.copyWith(selectedCategoryId: () => categoryId);
+    ref.read(sharedPrefsProvider).setInt(_selectedCategoryKey, categoryId ?? -1);
   }
   
   void clearFilters() {
@@ -145,9 +153,31 @@ final libraryPreferencesProvider = NotifierProvider<LibraryPreferencesNotifier, 
   return LibraryPreferencesNotifier();
 });
 
+final effectiveCategoryIdProvider = Provider<int?>((ref) {
+  final preferredId = ref.watch(libraryPreferencesProvider.select((p) => p.selectedCategoryId));
+  final showAllCat = ref.watch(showAllCategoryProvider);
+  final hiddenCategories = ref.watch(hiddenCategoriesProvider);
+  final categoriesState = ref.watch(categoriesProvider);
+
+  if (preferredId == null) {
+    if (showAllCat) return null;
+  } else {
+    if (!hiddenCategories.contains(preferredId)) return preferredId;
+  }
+
+  // Fallback: find the first available visible category
+  final categories = categoriesState.value ?? [];
+  final visibleCategories = categories.where((c) => !hiddenCategories.contains(c.id)).toList();
+  if (visibleCategories.isNotEmpty) {
+    return visibleCategories.first.id;
+  }
+  return null; // completely empty or all hidden
+});
+
 final filteredLibraryProvider = Provider<AsyncValue<List<Book>>>((ref) {
   final booksState = ref.watch(libraryControllerProvider);
   final prefs = ref.watch(libraryPreferencesProvider);
+  final effectiveCategoryId = ref.watch(effectiveCategoryIdProvider);
   final bookCategoriesState = ref.watch(bookCategoriesProvider);
 
   return booksState.whenData((books) {
@@ -155,8 +185,8 @@ final filteredLibraryProvider = Provider<AsyncValue<List<Book>>>((ref) {
 
     var filtered = books.where((book) {
       // 0. Category Filter
-      if (prefs.selectedCategoryId != null) {
-        final isInCat = bookCategories.any((bc) => bc.bookId == book.id && bc.categoryId == prefs.selectedCategoryId);
+      if (effectiveCategoryId != null) {
+        final isInCat = bookCategories.any((bc) => bc.bookId == book.id && bc.categoryId == effectiveCategoryId);
         if (!isInCat) return false;
       }
 

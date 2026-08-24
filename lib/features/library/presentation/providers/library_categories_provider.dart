@@ -25,6 +25,11 @@ class CategoryManagementController extends Notifier<void> {
     final repo = ref.read(localBookRepositoryProvider);
     await repo.deleteCategory(id);
   }
+
+  Future<void> deleteAndReassignCategory(int oldId, int? newId) async {
+    final repo = ref.read(localBookRepositoryProvider);
+    await repo.deleteAndReassignCategory(oldId, newId);
+  }
   
   Future<void> renameCategory(int id, String newName) async {
     final repo = ref.read(localBookRepositoryProvider);

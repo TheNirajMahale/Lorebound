@@ -106,6 +106,20 @@ class LocalBookRepository {
     return (_db.delete(_db.categories)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<void> deleteAndReassignCategory(int oldId, int? newId) async {
+    await _db.transaction(() async {
+      if (newId != null) {
+        final booksInOld = await (_db.select(_db.bookCategories)..where((t) => t.categoryId.equals(oldId))).get();
+        for (final entry in booksInOld) {
+          await _db.into(_db.bookCategories).insertOnConflictUpdate(
+            BookCategoryEntity(bookId: entry.bookId, categoryId: newId)
+          );
+        }
+      }
+      await deleteCategory(oldId);
+    });
+  }
+
   Future<void> updateCategoryOrder(List<int> orderedIds) async {
     await _db.transaction(() async {
       for (int i = 0; i < orderedIds.length; i++) {
