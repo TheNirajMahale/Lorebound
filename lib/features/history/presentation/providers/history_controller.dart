@@ -20,13 +20,18 @@ class HistoryController extends AsyncNotifier<List<HistoryEntry>> {
   /// Delete history entries before a given cutoff.
   Future<void> deleteHistoryBefore(DateTime cutoff) async {
     await ref.read(readingHistoryRepositoryProvider).deleteHistoryBefore(cutoff);
-    await refresh();
+    // Re-fetch from DB instead of going through a loading state,
+    // which would flash an empty/black screen momentarily.
+    final updated = await ref.read(readingHistoryRepositoryProvider).getHistory();
+    state = AsyncData(updated);
   }
 
   /// Delete all history.
   Future<void> deleteAllHistory() async {
     await ref.read(readingHistoryRepositoryProvider).deleteAllHistory();
-    await refresh();
+    // Set directly to empty list — no need for a loading → data round-trip
+    // that causes the black screen flicker.
+    state = const AsyncData([]);
   }
 
   /// Delete a single history entry.

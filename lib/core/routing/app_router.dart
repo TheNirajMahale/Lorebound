@@ -38,15 +38,6 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/library',
                 builder: (context, state) => const LibraryScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'book/:id',
-                    builder: (context, state) {
-                      final idStr = state.pathParameters['id']!;
-                      return BookDetailScreen(bookId: int.parse(idStr));
-                    },
-                  ),
-                ],
               ),
             ],
           ),
@@ -65,47 +56,69 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/more',
                 builder: (context, state) => const MoreScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'categories',
-                    builder: (context, state) => const CategoryManagementScreen(),
-                  ),
-                  GoRoute(
-                    path: 'downloads',
-                    builder: (context, state) => const DownloadsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'statistics',
-                    builder: (context, state) => const StatisticsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'settings',
-                    builder: (context, state) => const SettingsScreen(),
-                    routes: [
-                      GoRoute(
-                        path: 'appearance',
-                        builder: (context, state) => const AppearanceSettingsScreen(),
-                      ),
-                      GoRoute(
-                        path: 'library',
-                        builder: (context, state) => const LibrarySettingsScreen(),
-                      ),
-                      GoRoute(
-                        path: 'reader',
-                        builder: (context, state) => const ReaderSettingsScreen(),
-                      ),
-                      GoRoute(
-                        path: 'data-storage',
-                        builder: (context, state) => const DataStorageSettingsScreen(),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ],
           ),
         ],
       ),
+
+      // --- Sub-pages: full-screen (no bottom nav bar) ---
+      // They use _rootNavigatorKey so they push on top of MainScaffold.
+
+      // Library sub-pages
+      GoRoute(
+        path: '/library/book/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final idStr = state.pathParameters['id']!;
+          return BookDetailScreen(bookId: int.parse(idStr));
+        },
+      ),
+
+      // More sub-pages
+      GoRoute(
+        path: '/more/categories',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CategoryManagementScreen(),
+      ),
+      GoRoute(
+        path: '/more/downloads',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DownloadsScreen(),
+      ),
+      GoRoute(
+        path: '/more/statistics',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const StatisticsScreen(),
+      ),
+      GoRoute(
+        path: '/more/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
+      ),
+
+      // Settings sub-pages
+      GoRoute(
+        path: '/more/settings/appearance',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AppearanceSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/more/settings/library',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const LibrarySettingsScreen(),
+      ),
+      GoRoute(
+        path: '/more/settings/reader',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ReaderSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/more/settings/data-storage',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DataStorageSettingsScreen(),
+      ),
+
       // Reader is full-screen and outside the MainScaffold
       GoRoute(
         path: '/reader',

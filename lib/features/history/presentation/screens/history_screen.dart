@@ -117,7 +117,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            _searchQuery.isEmpty ? 'No reading history' : 'No results found',
+            _searchQuery.isEmpty ? "You haven't read anything yet" : 'No results found',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -125,11 +125,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            _searchQuery.isEmpty
-                ? 'Books you read will appear here'
-                : 'Try a different search term',
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            child: Text(
+              _searchQuery.isEmpty
+                  ? 'Start by importing an EPUB from the Library tab'
+                  : 'Try a different search term',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            ),
           ),
         ],
       ),
@@ -258,12 +262,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _DeleteOption('Last 15 minutes', () => _deleteByDuration(const Duration(minutes: 15))),
-            _DeleteOption('Last hour', () => _deleteByDuration(const Duration(hours: 1))),
-            _DeleteOption('Last 24 hours', () => _deleteByDuration(const Duration(hours: 24))),
-            _DeleteOption('Last 7 days', () => _deleteByDuration(const Duration(days: 7))),
-            _DeleteOption('Last 30 days', () => _deleteByDuration(const Duration(days: 30))),
-            _DeleteOption('All time', () => _deleteAll()),
+            _DeleteOption('Last 15 minutes', () => _deleteByDuration(context, const Duration(minutes: 15))),
+            _DeleteOption('Last hour', () => _deleteByDuration(context, const Duration(hours: 1))),
+            _DeleteOption('Last 24 hours', () => _deleteByDuration(context, const Duration(hours: 24))),
+            _DeleteOption('Last 7 days', () => _deleteByDuration(context, const Duration(days: 7))),
+            _DeleteOption('Last 30 days', () => _deleteByDuration(context, const Duration(days: 30))),
+            _DeleteOption('All time', () => _deleteAll(context)),
             const Divider(height: 16),
             ListTile(
               dense: true,
@@ -295,14 +299,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  void _deleteByDuration(Duration duration) {
-    Navigator.of(context).pop();
+  void _deleteByDuration(BuildContext dialogContext, Duration duration) {
+    Navigator.of(dialogContext).pop();
     final cutoff = DateTime.now().subtract(duration);
     ref.read(historyControllerProvider.notifier).deleteHistoryBefore(cutoff);
   }
 
-  void _deleteAll() {
-    Navigator.of(context).pop();
+  void _deleteAll(BuildContext dialogContext) {
+    Navigator.of(dialogContext).pop();
     ref.read(historyControllerProvider.notifier).deleteAllHistory();
   }
 
