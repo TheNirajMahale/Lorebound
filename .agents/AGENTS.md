@@ -39,3 +39,6 @@ These rules MUST be followed by all AI agents working on the Lorebound frontend 
 
 ## 9. Constant Code Analysis
 - **Analyze After Edits:** You MUST run `flutter analyze` in the terminal immediately after making ANY edits to a `.dart` file. Do not wait until the end of a feature to analyze. Fix any errors before proceeding.
+
+## 10. Custom Widget Justification
+- **Document Alternatives:** Whenever a custom widget is chosen over an existing native Flutter package, you MUST document (e.g., in comments or PR notes): what the alternatives were, why the custom approach was chosen, and the long-term trade-offs for maintainability. Use custom widgets only when necessary.

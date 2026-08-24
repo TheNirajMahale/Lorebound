@@ -139,6 +139,20 @@ The reader has a bottom modal card (triggered by tapping the center of the scree
 | **Search in Book** | Full-text search across all chapters. |
 | **RuneGlass Integration** | Enable/disable bionic reading mode & tap-to-lookup dictionary *(Phase 6)*. |
 
+### 4.4 Settings & Configuration
+The app includes a comprehensive settings hub with:
+- **Appearance:** Global theme (Light/Dark/System), AMOLED Pitch Black, Dynamic Colors (Material You), and premium Theme Presets (e.g. Catppuccin, Nord, Dracula).
+- **Library:** Default category assignment and Chapter Swipe Actions configuration (e.g., swipe left to mark read, swipe right to download).
+- **Reader:** Global defaults for the reader engine (fonts, weights, text alignments, tab ordering).
+- **Data & Storage:** Storage location configuration, cache clearing, and CSV/JSON library exports.
+- **More:** Incognito Mode (disables history recording) and Download management.
+
+### 4.5 History & Tracking
+Lorebound automatically tracks reading history across the library. 
+- Records whenever a book is opened or a chapter is completed.
+- History entries are securely stored in the local Drift database with a join on the `Books` table to retrieve cover art and metadata.
+- **Incognito Mode:** When active, history recording is suspended, ensuring privacy for specific sessions.
+
 ---
 
 ### 4.3 Cross-Mode Reading Position Persistence & Context Overlap
@@ -188,6 +202,15 @@ Build the offline book management library and local database.
   - **Empty State & FAB:** Premium empty-state illustration + Floating Action Button to "Import Book".
   - **Book Details Sheet/Page:** Quick modal showing book metadata, reading stats, and "Resume Reading" / "Read Chapter 1" buttons.
   - **Seamless Navigation:** Tapping any book opens `ReaderScreen` with the selected book file path.
+- **Step 5 — Settings & Customization Hub:**
+  - `AppearanceSettingsScreen`: Theme modes, AMOLED toggles, and premium theme preset carousel.
+  - `LibrarySettingsScreen`: Chapter swipe actions configuration.
+  - `ReaderSettingsScreen`: Tab ordering and global text alignment, font weight, and expanded font options.
+  - `DataStorageSettingsScreen`: CSV/JSON export dialog.
+- **Step 6 — History & Tracking:**
+  - `ReadingHistories` schema table.
+  - `HistoryScreen`: Date-grouped list view with fast swipe-to-delete.
+  - Wire-up with `ReaderScreen` to automatically log chapter changes (respecting `Incognito Mode`).
 
 ### Phase 3: Authentication
 User accounts to enable cloud features.

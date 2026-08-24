@@ -12,4 +12,10 @@ abstract class AppThemePreset {
   
   /// The specific color scheme for dark mode
   ColorScheme get darkScheme;
+
+  /// Primary accent color for the settings theme carousel swatch
+  Color get previewColor => darkScheme.primary;
+
+  /// Surface color for the settings theme carousel skeleton background
+  Color get previewSurface => darkScheme.surface;
 }

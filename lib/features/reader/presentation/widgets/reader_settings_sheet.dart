@@ -45,15 +45,17 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
 
   @override
   Widget build(BuildContext context) {
-    final readerState = ref.watch(readerControllerProvider);
-    final config = readerState.config;
+    final config = ref.watch(readerControllerProvider).config;
     final notifier = ref.read(readerControllerProvider.notifier);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final tabOrder = ref.watch(readerTabOrderProvider);
 
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.65,
-      child: SafeArea(
+    return Material(
+      color: colorScheme.surface,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.65,
+        child: SafeArea(
         top: false,
         child: Column(
           children: [
@@ -83,38 +85,30 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
                       fontWeight: FontWeight.w500,
                       fontFamily: AppTypography.fontFamily,
                     ),
-                    tabs: [
-                      Tab(
+                    tabs: tabOrder.map((tabName) {
+                      final isSelected = _tabController.index == tabOrder.indexOf(tabName);
+                      IconData selectedIcon;
+                      IconData unselectedIcon;
+                      if (tabName == 'Navigation') {
+                        selectedIcon = Icons.menu_book;
+                        unselectedIcon = Icons.menu_book_outlined;
+                      } else if (tabName == 'Appearance') {
+                        selectedIcon = Icons.palette;
+                        unselectedIcon = Icons.palette_outlined;
+                      } else {
+                        selectedIcon = Icons.build;
+                        unselectedIcon = Icons.build_outlined;
+                      }
+                      
+                      return Tab(
                         icon: Icon(
-                          _tabController.index == 0
-                              ? Icons.menu_book
-                              : Icons.menu_book_outlined,
+                          isSelected ? selectedIcon : unselectedIcon,
                           size: 20,
                         ),
-                        text: 'Navigation',
+                        text: tabName,
                         height: 48,
-                      ),
-                      Tab(
-                        icon: Icon(
-                          _tabController.index == 1
-                              ? Icons.palette
-                              : Icons.palette_outlined,
-                          size: 20,
-                        ),
-                        text: 'Appearance',
-                        height: 48,
-                      ),
-                      Tab(
-                        icon: Icon(
-                          _tabController.index == 2
-                              ? Icons.build
-                              : Icons.build_outlined,
-                          size: 20,
-                        ),
-                        text: 'Tools',
-                        height: 48,
-                      ),
-                    ],
+                      );
+                    }).toList(),
                   );
                 },
               ),
@@ -126,22 +120,21 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  // Tab 1: Navigation
-                  _buildNavigationTab(context, colorScheme),
-
-                  // Tab 2: Appearance
-                  _buildAppearanceTab(context, colorScheme, config, notifier),
-
-                  // Tab 3: Tools
-                  _buildToolsTab(context, colorScheme),
-                ],
+                children: tabOrder.map((tabName) {
+                  if (tabName == 'Navigation') {
+                    return _buildNavigationTab(context, colorScheme);
+                  } else if (tabName == 'Appearance') {
+                    return _buildAppearanceTab(context, colorScheme, config, notifier);
+                  } else {
+                    return _buildToolsTab(context, colorScheme);
+                  }
+                }).toList(),
               ),
             ),
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildNavigationTab(BuildContext context, ColorScheme colorScheme) {
@@ -338,13 +331,80 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Wrap(
-          spacing: AppSpacing.sm,
-          children: [
-            _buildFontChip('Default (Sans)', null, config, notifier),
-            _buildFontChip('Serif', 'serif', config, notifier),
-            _buildFontChip('Monospace', 'monospace', config, notifier),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFontChip('Default (Sans)', 'Inter', config, notifier),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFontChip('Serif', 'Lora', config, notifier),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFontChip('Monospace', 'Fira Code', config, notifier),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFontChip('Outfit', 'Outfit', config, notifier),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        
+        // Font Weight
+        Text(
+          'Font Weight',
+          style: TextStyle(
+            fontSize: AppTypography.sm,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildFontWeightChip('Light', FontWeight.w300, config, notifier),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFontWeightChip('Normal', FontWeight.normal, config, notifier),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFontWeightChip('Medium', FontWeight.w500, config, notifier),
+              const SizedBox(width: AppSpacing.sm),
+              _buildFontWeightChip('Bold', FontWeight.bold, config, notifier),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        
+        // Text Alignment
+        Text(
+          'Text Alignment',
+          style: TextStyle(
+            fontSize: AppTypography.sm,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<TextAlign>(
+          segments: const [
+            ButtonSegment(
+              value: TextAlign.left,
+              label: Text('Left'),
+              icon: Icon(Icons.format_align_left),
+            ),
+            ButtonSegment(
+              value: TextAlign.center,
+              label: Text('Center'),
+              icon: Icon(Icons.format_align_center),
+            ),
+            ButtonSegment(
+              value: TextAlign.justify,
+              label: Text('Justify'),
+              icon: Icon(Icons.format_align_justify),
+            ),
           ],
+          selected: {config.textAlignment},
+          onSelectionChanged: (Set<TextAlign> newSelection) {
+            notifier.updateConfig(config.copyWith(textAlignment: newSelection.first));
+          },
         ),
         const SizedBox(height: AppSpacing.lg),
 
@@ -360,46 +420,38 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
                 color: colorScheme.onSurface,
               ),
             ),
-            Text(
-              '${config.fontSize.toInt()} px',
-              style: TextStyle(
-                fontSize: AppTypography.sm,
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ],
         ),
+        const SizedBox(height: AppSpacing.xs),
         Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
-              onPressed: config.fontSize > 12
-                  ? () => notifier.updateConfig(
-                      config.copyWith(fontSize: config.fontSize - 1),
-                    )
-                  : null,
-            ),
+            Icon(Icons.format_size, size: 16, color: colorScheme.onSurfaceVariant),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Slider(
-                value: config.fontSize,
-                min: 12.0,
-                max: 32.0,
-                divisions: 20,
-                label: '${config.fontSize.toInt()}',
-                onChanged: (value) {
-                  notifier.updateConfig(config.copyWith(fontSize: value));
-                },
+              child: SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 8.0,
+                  activeTrackColor: colorScheme.primary,
+                  inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                  thumbColor: colorScheme.primary,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
+                  showValueIndicator: ShowValueIndicator.onDrag,
+                ),
+                child: Slider(
+                  value: config.fontSize,
+                  min: 12.0,
+                  max: 32.0,
+                  divisions: 20,
+                  label: '${config.fontSize.toInt()} px',
+                  onChanged: (value) {
+                    notifier.updateConfig(config.copyWith(fontSize: value));
+                  },
+                ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: config.fontSize < 32
-                  ? () => notifier.updateConfig(
-                      config.copyWith(fontSize: config.fontSize + 1),
-                    )
-                  : null,
-            ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(Icons.format_size, size: 24, color: colorScheme.onSurfaceVariant),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -416,62 +468,42 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
                 color: colorScheme.onSurface,
               ),
             ),
-            Text(
-              '${config.lineSpacing.toStringAsFixed(1)}x',
-              style: TextStyle(
-                fontSize: AppTypography.sm,
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ],
         ),
+        const SizedBox(height: AppSpacing.xs),
         Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
-              onPressed: config.lineSpacing > 1.05
-                  ? () => notifier.updateConfig(
-                      config.copyWith(
-                        lineSpacing: double.parse(
-                          (config.lineSpacing - 0.1)
-                              .clamp(1.0, 2.5)
-                              .toStringAsFixed(1),
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
+            Icon(Icons.density_small, size: 20, color: colorScheme.onSurfaceVariant),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Slider(
-                value: config.lineSpacing,
-                min: 1.0,
-                max: 2.5,
-                divisions: 15,
-                label: config.lineSpacing.toStringAsFixed(1),
-                onChanged: (value) {
-                  notifier.updateConfig(
-                    config.copyWith(
-                      lineSpacing: double.parse(value.toStringAsFixed(1)),
-                    ),
-                  );
-                },
+              child: SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 8.0,
+                  activeTrackColor: colorScheme.primary,
+                  inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                  thumbColor: colorScheme.primary,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 24),
+                  showValueIndicator: ShowValueIndicator.onDrag,
+                ),
+                child: Slider(
+                  value: config.lineSpacing,
+                  min: 1.0,
+                  max: 2.5,
+                  divisions: 15,
+                  label: '${config.lineSpacing.toStringAsFixed(1)}x',
+                  onChanged: (value) {
+                    notifier.updateConfig(
+                      config.copyWith(
+                        lineSpacing: double.parse(value.toStringAsFixed(1)),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: config.lineSpacing < 2.45
-                  ? () => notifier.updateConfig(
-                      config.copyWith(
-                        lineSpacing: double.parse(
-                          (config.lineSpacing + 0.1)
-                              .clamp(1.0, 2.5)
-                              .toStringAsFixed(1),
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(Icons.format_line_spacing, size: 24, color: colorScheme.onSurfaceVariant),
           ],
         ),
       ],
@@ -484,14 +516,33 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
     ReaderConfig config,
     ReaderController notifier,
   ) {
-    final isSelected = config.fontFamily == fontFamily;
+    final isSelected = config.fontFamily == (fontFamily ?? 'Inter');
     return ExpressiveChip(
       label: label,
       fontFamily: fontFamily,
       isSelected: isSelected,
       onTap: () {
         if (!isSelected) {
-          notifier.updateConfig(config.copyWith(fontFamily: fontFamily));
+          notifier.updateConfig(config.copyWith(fontFamily: fontFamily ?? 'Inter'));
+        }
+      },
+    );
+  }
+
+  Widget _buildFontWeightChip(
+    String label,
+    FontWeight weight,
+    ReaderConfig config,
+    ReaderController notifier,
+  ) {
+    final isSelected = config.fontWeight == weight;
+    return ExpressiveChip(
+      label: label,
+      fontFamily: config.fontFamily,
+      isSelected: isSelected,
+      onTap: () {
+        if (!isSelected) {
+          notifier.updateConfig(config.copyWith(fontWeight: weight));
         }
       },
     );

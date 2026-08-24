@@ -5,12 +5,22 @@ import 'package:go_router/go_router.dart';
 import 'main_scaffold.dart';
 import '../../features/library/presentation/screens/library_screen.dart';
 import '../../features/library/presentation/screens/book_detail_screen.dart';
+import '../../features/history/presentation/screens/history_screen.dart';
+import '../../features/more/presentation/screens/more_screen.dart';
+import '../../features/more/presentation/screens/category_management_screen.dart';
+import '../../features/more/presentation/screens/downloads_screen.dart';
+import '../../features/more/presentation/screens/statistics_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/settings/presentation/screens/appearance_settings_screen.dart';
+import '../../features/settings/presentation/screens/library_settings_screen.dart';
+import '../../features/settings/presentation/screens/reader_settings_screen.dart';
+import '../../features/settings/presentation/screens/data_storage_settings_screen.dart';
 import '../../features/reader/presentation/screens/reader_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _libraryNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'library');
-final _settingsNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'settings');
+final _historyNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'history');
+final _moreNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'more');
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -41,11 +51,56 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
-            navigatorKey: _settingsNavigatorKey,
+            navigatorKey: _historyNavigatorKey,
             routes: [
               GoRoute(
-                path: '/settings',
-                builder: (context, state) => const SettingsScreen(),
+                path: '/history',
+                builder: (context, state) => const HistoryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _moreNavigatorKey,
+            routes: [
+              GoRoute(
+                path: '/more',
+                builder: (context, state) => const MoreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'categories',
+                    builder: (context, state) => const CategoryManagementScreen(),
+                  ),
+                  GoRoute(
+                    path: 'downloads',
+                    builder: (context, state) => const DownloadsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'statistics',
+                    builder: (context, state) => const StatisticsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    builder: (context, state) => const SettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'appearance',
+                        builder: (context, state) => const AppearanceSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'library',
+                        builder: (context, state) => const LibrarySettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'reader',
+                        builder: (context, state) => const ReaderSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'data-storage',
+                        builder: (context, state) => const DataStorageSettingsScreen(),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

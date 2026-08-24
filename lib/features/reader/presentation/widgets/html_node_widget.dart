@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:epubx/epubx.dart' hide Image;
+import 'package:google_fonts/google_fonts.dart';
 import '../../domain/models/reader_config.dart';
 import '../providers/reader_controller.dart';
 
@@ -225,18 +226,28 @@ class _AnimatedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseStyle = TextStyle(
+      color: config.textColor,
+      fontSize: config.fontSize * sizeMultiplier,
+      height: config.lineSpacing,
+      fontWeight: fontWeight ?? config.fontWeight,
+    );
+
+    // Apply GoogleFonts, falling back to baseStyle if the font isn't found or supported
+    TextStyle finalStyle;
+    try {
+      finalStyle = GoogleFonts.getFont(config.fontFamily, textStyle: baseStyle);
+    } catch (_) {
+      finalStyle = baseStyle.copyWith(fontFamily: config.fontFamily);
+    }
+
     return AnimatedDefaultTextStyle(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      style: TextStyle(
-        color: config.textColor,
-        fontSize: config.fontSize * sizeMultiplier,
-        fontFamily: config.fontFamily,
-        height: config.lineSpacing,
-        fontWeight: fontWeight ?? FontWeight.normal,
-      ),
+      style: finalStyle,
       child: Text.rich(
         TextSpan(children: spans),
+        textAlign: config.textAlignment,
         textScaler: const TextScaler.linear(1.0),
       ),
     );

@@ -12,6 +12,7 @@ import '../providers/library_categories_provider.dart';
 import '../../data/services/epub_import_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../providers/library_selection_provider.dart';
+import '../../../settings/presentation/providers/library_ui_provider.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -166,26 +167,57 @@ bool _isSearchActive = false;
             builder: (context, ref, child) {
               final categoryId = ref.watch(libraryPreferencesProvider.select((p) => p.selectedCategoryId));
               final categoriesState = ref.watch(categoriesProvider);
+              final showAllCat = ref.watch(showAllCategoryProvider);
+              final allCatIndex = ref.watch(allCategoryIndexProvider);
+              final hiddenCategories = ref.watch(hiddenCategoriesProvider);
               
               return ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 8.0),
-                children: [
-                  ExpressiveChip(
-                    label: 'All',
-                    isSelected: categoryId == null,
-                    onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
-                  ),
-                  ...categoriesState.when(
-                    data: (categories) => categories.map((cat) => ExpressiveChip(
+                children: categoriesState.when(
+                  data: (categories) {
+                    final chips = categories
+                        .where((cat) => !hiddenCategories.contains(cat.id))
+                        .map<Widget>((cat) => ExpressiveChip(
                       label: cat.name,
                       isSelected: categoryId == cat.id,
                       onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(cat.id),
-                    )).toList(),
-                    loading: () => const [Padding(padding: EdgeInsets.all(8.0), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))],
-                    error: (_, __) => const [],
-                  ),
-                ],
+                    )).toList();
+                    
+                    if (showAllCat) {
+                      final safeIndex = allCatIndex.clamp(0, chips.length);
+                      chips.insert(
+                        safeIndex,
+                        ExpressiveChip(
+                          label: 'All',
+                          isSelected: categoryId == null,
+                          onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
+                        ),
+                      );
+                    }
+                    return chips;
+                  },
+                  loading: () {
+                    final chips = <Widget>[
+                      const Padding(padding: EdgeInsets.all(8.0), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+                    ];
+                    if (showAllCat) {
+                      chips.insert(0, ExpressiveChip(
+                        label: 'All',
+                        isSelected: categoryId == null,
+                        onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
+                      ));
+                    }
+                    return chips;
+                  },
+                  error: (_, __) => showAllCat ? [
+                    ExpressiveChip(
+                      label: 'All',
+                      isSelected: categoryId == null,
+                      onTap: () => ref.read(libraryPreferencesProvider.notifier).updateSelectedCategoryId(null),
+                    )
+                  ] : [],
+                ),
               );
             },
           ),

@@ -11,18 +11,22 @@ import '../local/app_database.dart';
 import '../../../reader/data/services/epub_parser_service.dart';
 import '../../../reader/data/services/epub_parser_service_provider.dart';
 
+import '../../../reader/data/services/epub_cache_service.dart';
+
 final epubImportServiceProvider = Provider<EpubImportService>((ref) {
   return EpubImportService(
     ref.watch(localBookRepositoryProvider),
     ref.watch(epubParserServiceProvider),
+    ref.watch(epubCacheServiceProvider),
   );
 });
 
 class EpubImportService {
   final LocalBookRepository _repository;
   final EpubParserService _parserService;
+  final EpubCacheService _cacheService;
 
-  EpubImportService(this._repository, this._parserService);
+  EpubImportService(this._repository, this._parserService, this._cacheService);
 
   Future<bool> pickAndImportEpub({void Function(int count)? onStartImporting}) async {
     try {
@@ -105,7 +109,7 @@ class EpubImportService {
           final String chaptersJsonStr = jsonEncode(chapterTitles);
 
           // Insert into DB
-          await _repository.insertBook(
+          final bookId = await _repository.insertBook(
             BooksCompanion(
               title: drift.Value(title),
               author: drift.Value(author),
@@ -119,7 +123,8 @@ class EpubImportService {
           );
 
           // Pre-cache the parsed book so it opens instantly when tapped right after import!
-          _parserService.cacheBook(destFile.path, epubBook);
+          _parserService.cacheBook(destFile.path, epubBook); // RAM
+          await _cacheService.saveToCache(bookId, epubBook); // Disk
 
           anySuccess = true;
         } catch (e) {

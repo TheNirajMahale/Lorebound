@@ -6,7 +6,13 @@ import 'package:epubx/epubx.dart';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import 'epub_cache_service.dart';
+
 class EpubParserService {
+  final EpubCacheService _cacheService;
+
+  EpubParserService(this._cacheService);
+
   static final Map<String, EpubBook> _bookCache = {};
   static final Map<String, Future<EpubBook>> _parsingTasks = {};
 
@@ -42,11 +48,19 @@ class EpubParserService {
     return book;
   }
 
-  Future<EpubBook> loadBookFromFile(String filePath) async {
+  Future<EpubBook> loadBookFromFile(String filePath, {int? bookId}) async {
     if (_bookCache.containsKey(filePath)) return _bookCache[filePath]!;
     if (_parsingTasks.containsKey(filePath)) return await _parsingTasks[filePath]!;
 
-    final task = _loadFileTask(filePath);
+    if (bookId != null) {
+      final cachedBook = await _cacheService.loadFromCache(bookId);
+      if (cachedBook != null) {
+        cacheBook(filePath, cachedBook); // RAM cache
+        return cachedBook;
+      }
+    }
+
+    final task = _loadFileTask(filePath, bookId: bookId);
     _parsingTasks[filePath] = task;
     try {
       return await task;
@@ -55,11 +69,15 @@ class EpubParserService {
     }
   }
 
-  Future<EpubBook> _loadFileTask(String filePath) async {
+  Future<EpubBook> _loadFileTask(String filePath, {int? bookId}) async {
     final file = File(filePath);
     final bytes = await file.readAsBytes();
     final book = await compute(_parseResilientTask, bytes);
     cacheBook(filePath, book);
+    
+    if (bookId != null) {
+      await _cacheService.saveToCache(bookId, book);
+    }
     return book;
   }
 

@@ -49,22 +49,49 @@ class AssignCategorySheet extends ConsumerWidget {
                   );
                 }
                 
+                final bookCategoriesState = ref.watch(bookCategoriesProvider);
+                
                 return Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
                       final category = categories[index];
-                      // For a true implementation we would look up if all/some selected books have this category.
-                      // For now, we'll provide a simple tap to assign.
-                      return ListTile(
-                        leading: const Icon(Icons.label_outline),
-                        title: Text(category.name),
-                        onTap: () {
-                          ref.read(categoryManagementProvider.notifier)
-                              .assignBooksToCategory(selectedBookIds, category.id, true);
-                          Navigator.of(context).pop();
+                      
+                      return bookCategoriesState.when(
+                        data: (bookCategories) {
+                          // Find how many selected books have this category
+                          int count = 0;
+                          for (final bc in bookCategories) {
+                            if (bc.categoryId == category.id && selectedBookIds.contains(bc.bookId)) {
+                              count++;
+                            }
+                          }
+                          
+                          bool? isChecked;
+                          if (count == selectedBookIds.length && selectedBookIds.isNotEmpty) {
+                            isChecked = true;
+                          } else if (count == 0) {
+                            isChecked = false;
+                          } else {
+                            isChecked = null; // Tristate
+                          }
+                          
+                          return CheckboxListTile(
+                            tristate: true,
+                            value: isChecked,
+                            title: Text(category.name),
+                            secondary: const Icon(Icons.label_outline),
+                            onChanged: (bool? value) {
+                              // If value is null, treat it as false (user wants to clear it)
+                              final assign = value ?? false;
+                              ref.read(categoryManagementProvider.notifier)
+                                  .assignBooksToCategory(selectedBookIds, category.id, assign);
+                            },
+                          );
                         },
+                        loading: () => const ListTile(title: Text('Loading...')),
+                        error: (_, __) => const ListTile(title: Text('Error')),
                       );
                     },
                   ),

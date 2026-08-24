@@ -35,6 +35,11 @@ class CategoryManagementController extends Notifier<void> {
     final repo = ref.read(localBookRepositoryProvider);
     await repo.setBooksCategory(bookIds, categoryId, assign);
   }
+
+  Future<void> reorderCategories(List<int> orderedIds) async {
+    final repo = ref.read(localBookRepositoryProvider);
+    await repo.updateCategoryOrder(orderedIds);
+  }
 }
 
 final categoryManagementProvider = NotifierProvider<CategoryManagementController, void>(() {

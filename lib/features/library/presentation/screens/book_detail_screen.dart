@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../data/repositories/local_book_repository.dart';
 import '../providers/library_controller.dart';
 import '../providers/book_chapters_provider.dart';
 import '../widgets/assign_category_sheet.dart';
 import '../../domain/models/book.dart';
+import '../../../settings/domain/models/chapter_swipe_config.dart';
+import '../../../settings/presentation/providers/chapter_swipe_provider.dart';
 
 class BookDetailScreen extends ConsumerWidget {
   final int bookId;
@@ -17,6 +20,7 @@ class BookDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final libraryState = ref.watch(libraryControllerProvider);
+    final swipeConfig = ref.watch(chapterSwipeProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -260,11 +264,11 @@ class BookDetailScreen extends ConsumerWidget {
             ),
           ),
           if (book.cachedChapters != null && book.cachedChapters!.isNotEmpty)
-            _buildChapterList(context, book, book.cachedChapters!, colorScheme)
+            _buildChapterList(context, ref, book, book.cachedChapters!, colorScheme, swipeConfig)
           else if (book.filePath != null)
             Consumer(
-              builder: (context, ref, child) {
-                final chaptersAsync = ref.watch(bookChaptersProvider(book.filePath!));
+              builder: (context, consumerRef, child) {
+                final chaptersAsync = consumerRef.watch(bookChaptersProvider(book.filePath!));
                 
                 return chaptersAsync.when(
                   loading: () => SliverList(
@@ -286,7 +290,7 @@ class BookDetailScreen extends ConsumerWidget {
                       child: Text('Error loading chapters: $e', style: TextStyle(color: Colors.red)),
                     ),
                   ),
-                  data: (titles) => _buildChapterList(context, book, titles, colorScheme),
+                  data: (titles) => _buildChapterList(context, consumerRef, book, titles, colorScheme, swipeConfig),
                 );
               },
             ),
@@ -295,29 +299,79 @@ class BookDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildChapterList(BuildContext context, Book book, List<String> titles, ColorScheme colorScheme) {
+  Widget _buildChapterList(
+    BuildContext context, 
+    WidgetRef ref,
+    Book book, 
+    List<String> titles, 
+    ColorScheme colorScheme,
+    ChapterSwipeConfig swipeConfig,
+  ) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
           final isRead = index < book.currentChapter;
           final isCurrent = index == book.currentChapter;
+          
+          Widget buildBackground(SwipeAction action, Alignment alignment) {
+            return Container(
+              color: action.color(colorScheme),
+              alignment: alignment,
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Icon(action.icon, color: colorScheme.onPrimary),
+            );
+          }
 
-          return ListTile(
-            title: Text(
-              titles[index],
-              style: TextStyle(
-                color: isRead 
-                    ? colorScheme.onSurface.withValues(alpha: 0.5)
-                    : colorScheme.onSurface,
-                fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            trailing: isRead ? Icon(Icons.check, size: 16, color: colorScheme.onSurface.withValues(alpha: 0.5)) : null,
-            onTap: () {
-                if (book.filePath != null) {
-                  context.push('/reader?bookId=${book.id}&chapter=$index&filePath=${Uri.encodeComponent(book.filePath!)}');
-                }
+          return Dismissible(
+            key: ValueKey('${book.id}_chapter_$index'),
+            background: buildBackground(swipeConfig.swipeLeft, Alignment.centerLeft),
+            secondaryBackground: buildBackground(swipeConfig.swipeRight, Alignment.centerRight),
+            confirmDismiss: (direction) async {
+              final action = direction == DismissDirection.startToEnd 
+                  ? swipeConfig.swipeLeft 
+                  : swipeConfig.swipeRight;
+                  
+              if (action == SwipeAction.none) return false;
+              
+              if (action == SwipeAction.markAsRead) {
+                // If marking as read, the current chapter becomes the NEXT chapter index
+                await ref.read(localBookRepositoryProvider).updateBookProgress(book.id, index + 1, '0.0');
+                ref.read(libraryControllerProvider.notifier).refresh();
+              } else if (action == SwipeAction.markAsUnread) {
+                // If marking as unread, the current chapter becomes THIS chapter index
+                await ref.read(localBookRepositoryProvider).updateBookProgress(book.id, index, '0.0');
+                ref.read(libraryControllerProvider.notifier).refresh();
+              }
+              
+              if (!context.mounted) return false;
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${action.label} - Chapter ${index + 1}'),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+              
+              // We return false because we don't actually want to remove the item from the list
+              return false;
             },
+            child: ListTile(
+              title: Text(
+                titles[index],
+                style: TextStyle(
+                  color: isRead 
+                      ? colorScheme.onSurface.withValues(alpha: 0.5)
+                      : colorScheme.onSurface,
+                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              trailing: isRead ? Icon(Icons.check, size: 16, color: colorScheme.onSurface.withValues(alpha: 0.5)) : null,
+              onTap: () {
+                  if (book.filePath != null) {
+                    context.push('/reader?bookId=${book.id}&chapter=$index&filePath=${Uri.encodeComponent(book.filePath!)}');
+                  }
+              },
+            ),
           );
         },
         childCount: titles.length,

@@ -82,7 +82,9 @@ class LocalBookRepository {
   }
 
   Stream<List<CategoryEntity>> watchAllCategories() {
-    return _db.select(_db.categories).watch();
+    return (_db.select(_db.categories)
+          ..orderBy([(t) => drift.OrderingTerm(expression: t.sortOrder, mode: drift.OrderingMode.asc)]))
+        .watch();
   }
 
   Stream<List<BookCategoryEntity>> watchAllBookCategories() {
@@ -102,6 +104,17 @@ class LocalBookRepository {
     // Delete from join table first
     await (_db.delete(_db.bookCategories)..where((t) => t.categoryId.equals(id))).go();
     return (_db.delete(_db.categories)..where((t) => t.id.equals(id))).go();
+  }
+
+  Future<void> updateCategoryOrder(List<int> orderedIds) async {
+    await _db.transaction(() async {
+      for (int i = 0; i < orderedIds.length; i++) {
+        final id = orderedIds[i];
+        if (id == -1) continue; // Skip fake 'All' category
+        await (_db.update(_db.categories)..where((t) => t.id.equals(id)))
+            .write(CategoriesCompanion(sortOrder: drift.Value(i)));
+      }
+    });
   }
 
   Future<List<CategoryEntity>> getCategoriesForBook(int bookId) async {
@@ -130,5 +143,18 @@ class LocalBookRepository {
         }
       }
     });
+  }
+
+  // --- Preferences Methods ---
+  
+  Future<String?> getPreference(String key) async {
+    final pref = await (_db.select(_db.userPreferences)..where((t) => t.key.equals(key))).getSingleOrNull();
+    return pref?.value;
+  }
+
+  Future<void> setPreference(String key, String value) async {
+    await _db.into(_db.userPreferences).insertOnConflictUpdate(
+      UserPreferenceEntity(key: key, value: value)
+    );
   }
 }

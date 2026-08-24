@@ -42,7 +42,7 @@ void main() {
     final zipBytes = ZipEncoder().encode(archive);
     expect(zipBytes, isNotNull);
 
-    final service = EpubParserService();
+    final service = EpubParserService(EpubCacheService());
     // Save to temp or test direct parser
     expect(service, isNotNull);
   });

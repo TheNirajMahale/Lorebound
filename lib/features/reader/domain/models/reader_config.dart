@@ -20,6 +20,8 @@ class ReaderConfig {
   final double fontSize;
   final double lineSpacing;
   final double brightness;
+  final TextAlign textAlignment;
+  final FontWeight fontWeight;
 
   const ReaderConfig({
     this.mode = ReaderMode.scroll,
@@ -28,6 +30,8 @@ class ReaderConfig {
     this.fontSize = 18.0,
     this.lineSpacing = 1.5,
     this.brightness = 1.0,
+    this.textAlignment = TextAlign.left,
+    this.fontWeight = FontWeight.normal,
   });
 
   ReaderConfig copyWith({
@@ -37,6 +41,8 @@ class ReaderConfig {
     double? fontSize,
     double? lineSpacing,
     double? brightness,
+    TextAlign? textAlignment,
+    FontWeight? fontWeight,
   }) {
     return ReaderConfig(
       mode: mode ?? this.mode,
@@ -45,6 +51,8 @@ class ReaderConfig {
       fontSize: fontSize ?? this.fontSize,
       lineSpacing: lineSpacing ?? this.lineSpacing,
       brightness: brightness ?? this.brightness,
+      textAlignment: textAlignment ?? this.textAlignment,
+      fontWeight: fontWeight ?? this.fontWeight,
     );
   }
 

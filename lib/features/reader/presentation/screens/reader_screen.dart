@@ -9,6 +9,10 @@ import '../providers/reader_state_providers.dart';
 import '../widgets/native_scroll_reader.dart';
 import '../widgets/native_paginated_reader.dart';
 import '../../domain/models/reader_config.dart';
+import '../../../history/data/repositories/reading_history_repository.dart';
+import '../../../history/presentation/providers/history_controller.dart';
+import '../../../more/presentation/providers/more_provider.dart';
+import '../../data/services/epub_parser_service_provider.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   final int bookId;
@@ -39,6 +43,53 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _saveDebouncer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         _repo.updateBookProgress(widget.bookId, chapterIndex, progress.toString());
+      }
+    });
+  }
+  
+  void _recordHistory(int chapterIndex) {
+    if (widget.bookId < 0) return;
+    
+    // Check incognito mode
+    final isIncognito = ref.read(incognitoModeProvider);
+    if (isIncognito) return;
+    
+    final bookState = ref.read(readerBookProvider);
+    bookState.whenData((book) {
+      if (book != null && chapterIndex >= 0) {
+        final parser = ref.read(epubParserServiceProvider);
+        final chapters = parser.flattenChapters(book.Chapters);
+        final hasCover = parser.getCoverKey(book).isNotEmpty;
+        
+        String resolvedTitle;
+        if (hasCover) {
+          if (chapterIndex == 0) {
+            resolvedTitle = 'Cover';
+          } else {
+            final idx = chapterIndex - 1;
+            if (idx >= 0 && idx < chapters.length) {
+               final t = chapters[idx].Title?.trim();
+               resolvedTitle = (t != null && t.isNotEmpty) ? t : 'Chapter $chapterIndex';
+            } else {
+               resolvedTitle = 'Chapter $chapterIndex';
+            }
+          }
+        } else {
+          if (chapterIndex >= 0 && chapterIndex < chapters.length) {
+             final t = chapters[chapterIndex].Title?.trim();
+             resolvedTitle = (t != null && t.isNotEmpty) ? t : 'Chapter ${chapterIndex + 1}';
+          } else {
+             resolvedTitle = 'Chapter ${chapterIndex + 1}';
+          }
+        }
+
+        ref.read(readingHistoryRepositoryProvider).addHistoryEntry(
+          bookId: widget.bookId,
+          chapterIndex: chapterIndex,
+          chapterTitle: resolvedTitle,
+        );
+        // Refresh history screen
+        ref.invalidate(historyControllerProvider);
       }
     });
   }
@@ -82,7 +133,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
       if (mounted) {
         ref.read(readerProgressProvider.notifier).updateProgress(startChapter, startProgress);
-        ref.read(readerBookProvider.notifier).loadBook(widget.filePath, isAsset: false);
+        ref.read(readerBookProvider.notifier).loadBook(widget.filePath, isAsset: false, bookId: widget.bookId);
+        
+        // Record initial opening in history
+        _recordHistory(startChapter);
+        
         setState(() {
           _isInitializing = false;
         });
@@ -115,6 +170,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       _lastProgress = next;
       if (previous?.chapterIndex != next.chapterIndex || previous?.progress != next.progress) {
         _saveProgress(next.chapterIndex, next.progress);
+      }
+      if (previous?.chapterIndex != next.chapterIndex && next.chapterIndex >= 0) {
+        _recordHistory(next.chapterIndex);
       }
     });
 

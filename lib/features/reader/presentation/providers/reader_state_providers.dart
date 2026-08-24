@@ -48,7 +48,7 @@ class ReaderBookNotifier extends AsyncNotifier<EpubBook?> {
     return null;
   }
 
-  Future<void> loadBook(String path, {required bool isAsset}) async {
+  Future<void> loadBook(String path, {required bool isAsset, int? bookId}) async {
     // build() is async and resolves to null on the next microtask. If we set
     // state before build() finishes, build()'s resolution will overwrite our
     // value with data(null), trapping the UI in a spinner. Waiting for
@@ -76,7 +76,7 @@ class ReaderBookNotifier extends AsyncNotifier<EpubBook?> {
     try {
       final book = isAsset
           ? await parserService.loadBookFromAsset(path)
-          : await parserService.loadBookFromFile(path);
+          : await parserService.loadBookFromFile(path, bookId: bookId);
 
       if (_mounted) {
         state = AsyncValue.data(book);

@@ -52,12 +52,34 @@ class BookCategories extends Table {
   Set<Column> get primaryKey => {bookId, categoryId};
 }
 
-@DriftDatabase(tables: [Books, Categories, BookCategories])
+/// Per-chapter read timestamps for the History tab.
+/// bookId references Books.id; Books.backendId bridges to Lorekeeper for future sync.
+@DataClassName('ReadingHistoryEntity')
+class ReadingHistories extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get bookId => integer().references(Books, #id)();
+  IntColumn get chapterIndex => integer()();
+  TextColumn get chapterTitle => text().nullable()();
+  DateTimeColumn get readAt => dateTime()();
+}
+
+/// Key-value config store for user preferences.
+/// Designed as flat key-value for easy JSON export/import and future cloud sync.
+@DataClassName('UserPreferenceEntity')
+class UserPreferences extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
+
+@DriftDatabase(tables: [Books, Categories, BookCategories, ReadingHistories, UserPreferences])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -72,6 +94,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 3) {
           await m.addColumn(books, books.chaptersJson);
+        }
+        if (from < 4) {
+          await m.createTable(readingHistories);
+          await m.createTable(userPreferences);
         }
       },
       beforeOpen: (details) async {
