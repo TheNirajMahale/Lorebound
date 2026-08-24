@@ -30,9 +30,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: _isSearchActive
-          ? _buildSearchAppBar(colorScheme)
-          : _buildNormalAppBar(context, colorScheme),
+      appBar: _buildAppBar(context, colorScheme),
       body: historyState.when(
         data: (entries) {
           final filtered = _searchQuery.isEmpty
@@ -54,46 +52,40 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  AppBar _buildNormalAppBar(BuildContext context, ColorScheme colorScheme) {
+  AppBar _buildAppBar(BuildContext context, ColorScheme colorScheme) {
     return AppBar(
-      title: const Text('History'),
+      leading: _isSearchActive
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                setState(() {
+                  _isSearchActive = false;
+                  _searchController.clear();
+                  _searchQuery = '';
+                });
+              },
+            )
+          : null,
+      title: _isSearchActive
+          ? TextField(
+              controller: _searchController,
+              autofocus: true,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
+                hintText: 'Search history...',
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+            )
+          : const Text('History'),
       centerTitle: false,
       actions: [
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () => setState(() => _isSearchActive = true),
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete_sweep_outlined),
-          onPressed: () => _showDeleteDialog(context),
-        ),
-      ],
-    );
-  }
-
-  AppBar _buildSearchAppBar(ColorScheme colorScheme) {
-    return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          setState(() {
-            _isSearchActive = false;
-            _searchController.clear();
-            _searchQuery = '';
-          });
-        },
-      ),
-      title: TextField(
-        controller: _searchController,
-        autofocus: true,
-        decoration: const InputDecoration(
-          hintText: 'Search history...',
-          border: InputBorder.none,
-        ),
-        onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
-      ),
-      actions: [
-        if (_searchController.text.isNotEmpty)
+        if (_isSearchActive && _searchController.text.isNotEmpty)
           IconButton(
             icon: const Icon(Icons.clear),
             onPressed: () {
@@ -101,6 +93,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               setState(() => _searchQuery = '');
             },
           ),
+        if (!_isSearchActive)
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => setState(() => _isSearchActive = true),
+          ),
+        IconButton(
+          icon: const Icon(Icons.delete_sweep_outlined),
+          onPressed: () => _showDeleteDialog(context),
+        ),
       ],
     );
   }

@@ -23,22 +23,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final query = ref.watch(settingsSearchQueryProvider);
     
     return Scaffold(
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search settings...',
-                  border: InputBorder.none,
-                ),
-                onChanged: (value) {
-                  ref.read(settingsSearchQueryProvider.notifier).updateQuery(value);
-                },
-              )
-            : const Text('Settings'),
         leading: _isSearching
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
@@ -54,7 +42,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => context.pop(),
               ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                style: TextStyle(color: colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Search settings...',
+                  hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onChanged: (value) {
+                  ref.read(settingsSearchQueryProvider.notifier).updateQuery(value);
+                },
+              )
+            : const Text('Settings'),
+        centerTitle: false,
         actions: [
+          if (_isSearching && _searchController.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                _searchController.clear();
+                ref.read(settingsSearchQueryProvider.notifier).updateQuery('');
+              },
+            ),
           if (!_isSearching)
             IconButton(
               icon: const Icon(Icons.search),
@@ -64,31 +80,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 });
               },
             ),
-          if (_isSearching && _searchController.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: () {
-                _searchController.clear();
-                ref.read(settingsSearchQueryProvider.notifier).updateQuery('');
-              },
-            ),
         ],
       ),
-      body: _isSearching
-          ? _buildSearchResults(context, ref, colorScheme)
+      body: _isSearching && query.isNotEmpty
+          ? _buildSearchResults(context, ref, colorScheme, query)
           : _buildSettingsList(context, colorScheme),
     );
   }
 
-  Widget _buildSearchResults(BuildContext context, WidgetRef ref, ColorScheme colorScheme) {
+  Widget _buildSearchResults(BuildContext context, WidgetRef ref, ColorScheme colorScheme, String query) {
     final results = ref.watch(settingsSearchProvider);
-    final query = ref.watch(settingsSearchQueryProvider);
-
-    if (query.isEmpty) {
-      return Center(
-        child: Text('Type to search settings', style: TextStyle(color: colorScheme.onSurfaceVariant)),
-      );
-    }
 
     if (results.isEmpty) {
       return Center(
