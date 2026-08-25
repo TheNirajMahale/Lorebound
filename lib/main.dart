@@ -6,8 +6,13 @@ import 'core/routing/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/providers/shared_prefs_provider.dart';
 
+import 'package:flutter/services.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  
   final prefs = await SharedPreferences.getInstance();
   
   runApp(
@@ -31,13 +36,33 @@ class LoreboundApp extends ConsumerWidget {
     return LoreboundThemeBuilder(
       config: themeConfig,
       builder: (lightTheme, darkTheme) {
-        return MaterialApp.router(
-          title: 'Lorebound',
-          debugShowCheckedModeBanner: false,
-          themeMode: themeConfig.mode,
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          routerConfig: router,
+        final isDark = themeConfig.mode == ThemeMode.dark || 
+            (themeConfig.mode == ThemeMode.system && 
+             WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark);
+             
+        final activeTheme = isDark ? darkTheme : lightTheme;
+        
+        final overlayStyle = SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: activeTheme.colorScheme.surface,
+          systemNavigationBarDividerColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          systemNavigationBarContrastEnforced: false,
+          systemStatusBarContrastEnforced: false,
+        );
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: overlayStyle,
+          child: MaterialApp.router(
+            title: 'Lorebound',
+            debugShowCheckedModeBanner: false,
+            themeMode: themeConfig.mode,
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            routerConfig: router,
+          ),
         );
       },
     );
