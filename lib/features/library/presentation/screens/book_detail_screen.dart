@@ -52,46 +52,24 @@ class BookDetailScreen extends ConsumerWidget {
                   builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
                 );
               } else if (value == 'delete') {
-                bool deleteLocalFiles = true;
                 final confirm = await showDialog<bool>(
                   context: context,
-                  builder: (context) => StatefulBuilder(
-                    builder: (context, setState) {
-                      return AlertDialog(
-                        title: const Text('Delete Book?'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('This will remove the book from your library. Cannot be undone.'),
-                            const SizedBox(height: 16),
-                            CheckboxListTile(
-                              title: const Text('Delete from local file system also'),
-                              value: deleteLocalFiles,
-                              onChanged: (value) {
-                                setState(() {
-                                  deleteLocalFiles = value ?? true;
-                                });
-                              },
-                              controlAffinity: ListTileControlAffinity.leading,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
-                          FilledButton(
-                            style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-                            onPressed: () => context.pop(true),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      );
-                    }
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Book?'),
+                    content: const Text('This will permanently remove the book from your library and delete its local files. This cannot be undone.'),
+                    actions: [
+                      TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
+                      FilledButton(
+                        style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
+                        onPressed: () => context.pop(true),
+                        child: const Text('Delete'),
+                      ),
+                    ],
                   ),
                 );
                 
                 if (confirm == true && context.mounted) {
-                  ref.read(libraryControllerProvider.notifier).deleteBook(bookId, deleteLocalFiles: deleteLocalFiles);
+                  ref.read(libraryControllerProvider.notifier).deleteBook(bookId);
                   context.pop(); // Go back to library
                 }
               }

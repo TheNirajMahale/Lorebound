@@ -70,15 +70,18 @@ class EpubParserService {
   }
 
   Future<EpubBook> _loadFileTask(String filePath, {int? bookId}) async {
-    final file = File(filePath);
-    final bytes = await file.readAsBytes();
-    final book = await compute(_parseResilientTask, bytes);
+    final book = await compute(_parseFromFileTask, filePath);
     cacheBook(filePath, book);
     
     if (bookId != null) {
       await _cacheService.saveToCache(bookId, book);
     }
     return book;
+  }
+
+  static Future<EpubBook> _parseFromFileTask(String filePath) async {
+    final bytes = File(filePath).readAsBytesSync();
+    return _parseResilientTask(bytes);
   }
 
   /// Parses EPUB bytes with high-performance direct-zip parser and resilient fallback

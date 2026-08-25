@@ -69,7 +69,7 @@ class EpubCacheService {
       if (!await dataFile.exists()) return null;
 
       final jsonStr = await dataFile.readAsString();
-      final bookData = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final bookData = await compute(jsonDecode, jsonStr) as Map<String, dynamic>;
 
       final book = EpubBook()
         ..Title = bookData['title'] as String?
@@ -109,20 +109,29 @@ class EpubCacheService {
   Future<int> getCacheSize(int bookId) async {
     try {
       final docDir = await getApplicationDocumentsDirectory();
-      final dir = Directory(p.join(docDir.path, 'extracted_cache', 'book_$bookId'));
-      if (!await dir.exists()) return 0;
-
-      int totalSize = 0;
-      final files = dir.listSync(recursive: true);
-      for (final file in files) {
-        if (file is File) {
-          totalSize += await file.length();
-        }
-      }
-      return totalSize;
+      final dirPath = p.join(docDir.path, 'extracted_cache', 'book_$bookId');
+      
+      // Run the entire directory listing and size calculation in a background isolate
+      return await compute(_calculateDirectorySize, dirPath);
     } catch (_) {
       return 0;
     }
+  }
+
+  static int _calculateDirectorySize(String dirPath) {
+    int totalSize = 0;
+    final dir = Directory(dirPath);
+    if (!dir.existsSync()) return 0;
+
+    try {
+      final files = dir.listSync(recursive: true);
+      for (final file in files) {
+        if (file is File) {
+          totalSize += file.statSync().size;
+        }
+      }
+    } catch (_) {}
+    return totalSize;
   }
 
   Future<void> clearCache(int bookId) async {

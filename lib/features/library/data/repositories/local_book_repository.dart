@@ -36,7 +36,9 @@ class LocalBookRepository {
     return _db.update(_db.books).replace(book);
   }
 
-  Future<int> deleteBook(int id) {
+  Future<int> deleteBook(int id) async {
+    await (_db.delete(_db.bookCategories)..where((t) => t.bookId.equals(id))).go();
+    await (_db.delete(_db.readingHistories)..where((t) => t.bookId.equals(id))).go();
     return (_db.delete(_db.books)..where((t) => t.id.equals(id))).go();
   }
 
@@ -73,6 +75,8 @@ class LocalBookRepository {
   }
 
   Future<void> deleteBooks(List<int> ids) async {
+    await (_db.delete(_db.bookCategories)..where((t) => t.bookId.isIn(ids))).go();
+    await (_db.delete(_db.readingHistories)..where((t) => t.bookId.isIn(ids))).go();
     await (_db.delete(_db.books)..where((t) => t.id.isIn(ids))).go();
   }
 

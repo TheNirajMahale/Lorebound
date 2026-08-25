@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:epubx/epubx.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
+import '../../../../core/widgets/app_loading_indicator.dart';
 import 'html_node_widget.dart';
 
 class ChapterScrollView extends StatefulWidget {
@@ -112,7 +113,7 @@ class _ChapterScrollViewState extends State<ChapterScrollView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: AppLoadingIndicator());
     }
 
     return MediaQuery.removePadding(

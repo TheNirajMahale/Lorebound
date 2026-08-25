@@ -13,6 +13,11 @@ import '../../data/services/epub_import_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../providers/library_selection_provider.dart';
 import '../../../settings/presentation/providers/library_ui_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import '../providers/pending_imports_provider.dart';
+import '../providers/import_results_provider.dart';
+import '../widgets/pending_book_card.dart';
+import '../widgets/pending_book_list_tile.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -33,6 +38,35 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(pendingImportsProvider, (previous, next) {
+      if (previous != null && previous.isNotEmpty && next.isEmpty) {
+        final results = ref.read(importResultsProvider);
+        if (results.isEmpty) return;
+        
+        int success = 0;
+        int duplicate = 0;
+        int failed = 0;
+        for (final r in results) {
+          if (r.failed) {
+            failed++;
+          } else if (r.skippedAsDuplicate) {
+            duplicate++;
+          } else {
+            success++;
+          }
+        }
+        
+        final msg = StringBuffer('Imported $success book${success == 1 ? '' : 's'}.');
+        if (duplicate > 0) msg.write(' Skipped $duplicate duplicate${duplicate == 1 ? '' : 's'}.');
+        if (failed > 0) msg.write(' Failed to import $failed book${failed == 1 ? '' : 's'}.');
+        
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg.toString())));
+        ref.read(importResultsProvider.notifier).clear();
+      }
+    });
+
     final isSelectionMode = ref.watch(librarySelectionProvider.select((s) => s.isNotEmpty));
     final libraryState = ref.watch(filteredLibraryProvider);
     final theme = Theme.of(context);
@@ -54,15 +88,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               return _buildEmptyState(context, colorScheme);
             }
             final displayMode = ref.watch(libraryPreferencesProvider.select((p) => p.displayMode));
+            final pendingImports = ref.watch(pendingImportsProvider);
             
             if (displayMode == DisplayMode.list) {
               return RepaintBoundary(
                 child: ListView.builder(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: books.length,
+                  itemCount: pendingImports.length + books.length,
                   itemBuilder: (context, index) {
-                    final book = books[index];
-                    return BookListTile(book: book);
+                    final isPending = index < pendingImports.length;
+                    
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: isPending 
+                          ? PendingBookListTile(
+                              key: ValueKey('pending_${pendingImports[index].id}'), 
+                              fileName: pendingImports[index].fileName)
+                          : BookListTile(
+                              key: ValueKey('book_${books[index - pendingImports.length].id}'), 
+                              book: books[index - pendingImports.length]),
+                    );
                   },
                 ),
               );
@@ -80,10 +125,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   crossAxisSpacing: AppSpacing.md,
                   mainAxisSpacing: AppSpacing.md,
                 ),
-                itemCount: books.length,
+                itemCount: pendingImports.length + books.length,
                 itemBuilder: (context, index) {
-                  final book = books[index];
-                  return BookCard(book: book);
+                    final isPending = index < pendingImports.length;
+                    
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: isPending 
+                          ? PendingBookCard(
+                              key: ValueKey('pending_${pendingImports[index].id}'), 
+                              fileName: pendingImports[index].fileName)
+                          : BookCard(
+                              key: ValueKey('book_${books[index - pendingImports.length].id}'), 
+                              book: books[index - pendingImports.length]),
+                    );
                 },
               ),
             );
@@ -93,53 +148,34 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         ),
         floatingActionButton: isSelectionMode ? null : FloatingActionButton(
           onPressed: () async {
-            bool dialogShown = false;
-            final service = ref.read(epubImportServiceProvider);
-            final importedBookIds = await service.pickAndImportEpub(
-              onStartImporting: (count) {
-                dialogShown = true;
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => AlertDialog(
-                    content: Row(
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(width: AppSpacing.md),
-                        Text('Importing $count book${count > 1 ? 's' : ''}...'),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-            
-            if (!context.mounted) return;
-            if (dialogShown) {
-              Navigator.of(context, rootNavigator: true).pop();
-            }
-
-            if (importedBookIds.isNotEmpty) {
-              ref.read(libraryControllerProvider.notifier).refresh();
+            try {
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.custom,
+                allowedExtensions: ['epub'],
+                allowMultiple: true,
+              );
+              
+              if (result == null || result.files.isEmpty) return;
+              
+              if (!context.mounted) return;
               
               final currentCatId = ref.read(effectiveCategoryIdProvider);
               final defaultCatId = ref.read(defaultCategoryProvider);
               final categoriesState = ref.read(categoriesProvider);
-
+              
               int? targetCategoryId;
-
+              
               if (currentCatId != null) {
                 String currentCatName = 'this category';
-                categoriesState.whenData((categories) {
-                  final match = categories.where((c) => c.id == currentCatId).firstOrNull;
-                  if (match != null) currentCatName = match.name;
-                });
-
+                final categories = categoriesState.value ?? [];
+                final match = categories.where((c) => c.id == currentCatId).firstOrNull;
+                if (match != null) currentCatName = match.name;
+                
                 final shouldAssign = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Assign Category'),
-                    content: Text('Do you want to assign the imported book(s) to "$currentCatName"?'),
+                    content: Text('Do you want to assign the incoming book(s) to "$currentCatName"?'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
@@ -152,7 +188,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     ],
                   ),
                 );
-
+                
                 if (shouldAssign == true) {
                   targetCategoryId = currentCatId;
                 } else {
@@ -161,9 +197,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               } else {
                 targetCategoryId = defaultCatId;
               }
-
-              if (targetCategoryId != null) {
-                ref.read(categoryManagementProvider.notifier).assignBooksToCategory(importedBookIds, targetCategoryId, true);
+              
+              final service = ref.read(epubImportServiceProvider);
+              service.importEpubs(result.files, targetCategoryId); // Non-blocking!
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to open file picker.')),
+                );
               }
             }
           },
@@ -460,50 +501,27 @@ class SelectionBottomBar extends ConsumerWidget {
 
   Future<void> _showDeleteConfirmationDialog(BuildContext context, WidgetRef ref, List<int> selectedIds) async {
     final count = selectedIds.length;
-    bool deleteLocalFiles = false;
-
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Text('Delete $count books?'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('This will remove the books from your library. This action cannot be undone.'),
-                const SizedBox(height: 16),
-                CheckboxListTile(
-                  title: const Text('Delete from local file system also'),
-                  value: deleteLocalFiles,
-                  onChanged: (value) {
-                    setState(() {
-                      deleteLocalFiles = value ?? true;
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Delete'),
-              ),
-            ],
-          );
-        }
+      builder: (context) => AlertDialog(
+        title: Text('Delete $count books?'),
+        content: const Text('This will permanently remove the books from your library and delete their local files. This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
 
     if (confirm == true && context.mounted) {
-      ref.read(libraryControllerProvider.notifier).bulkDeleteBooks(selectedIds, deleteLocalFiles: deleteLocalFiles);
+      ref.read(libraryControllerProvider.notifier).bulkDeleteBooks(selectedIds);
       ref.read(librarySelectionProvider.notifier).clearSelection();
     }
   }

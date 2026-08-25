@@ -171,6 +171,16 @@ Lorebound acts as a strict consumer of the Lorekeeper backend (Private Reading C
 - **Contract Driven:** We maintain API contracts in `.agents/references/api-contract.md` to ensure smooth integration.
 - **Single Source of Truth:** Any new feature requiring backend support is added to the Lorekeeper API first to avoid mock endpoints or fragile logic in the frontend.
 
+### 5.1 Cloud Deletion Strategy (Point to Remember)
+When implementing the Lorekeeper Cloud Sync, we must split book deletion in the UI into two distinct actions to handle local vs cloud data properly:
+
+1. **"Remove Download" (Local Only)**
+   - **Action:** Deletes the heavy `.epub` file, cover image, and extracted cache off the device to save space.
+   - **Database:** Keeps the book row in both the local SQLite database and the cloud database. The reading history is preserved, and the book can be re-downloaded later.
+2. **"Delete from Library" (Nuclear Option)**
+   - **Action:** Wipes all local files (EPUB, cache, cover).
+   - **Database:** Hard deletes the book row from the local database, AND fires a `DELETE /api/books/{id}` request to the Lorekeeper cloud to completely wipe the book and its reading history from the user's account.
+
 ---
 
 ## 6. Development Roadmap

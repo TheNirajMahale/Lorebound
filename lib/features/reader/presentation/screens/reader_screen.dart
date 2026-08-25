@@ -8,6 +8,8 @@ import '../providers/reader_controller.dart';
 import '../providers/reader_state_providers.dart';
 import '../widgets/native_scroll_reader.dart';
 import '../widgets/native_paginated_reader.dart';
+import '../widgets/reader_bars.dart';
+import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../domain/models/reader_config.dart';
 import '../../../history/data/repositories/reading_history_repository.dart';
 import '../../../history/presentation/providers/history_controller.dart';
@@ -35,6 +37,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   late final LocalBookRepository _repo;
   ReaderProgress? _lastProgress;
   bool _isInitializing = true;
+  String? _loadingTitle;
+  String? _loadingAuthor;
 
   void _saveProgress(int chapterIndex, double progress) {
     if (widget.bookId < 0) return;
@@ -128,6 +132,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         if (book != null) {
           startChapter = book.currentChapter;
           startProgress = double.tryParse(book.readingPosition ?? '0.0') ?? 0.0;
+          if (mounted) {
+            setState(() {
+              _loadingTitle = book.title;
+              _loadingAuthor = book.author;
+            });
+          }
         }
       }
 
@@ -192,26 +202,42 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       systemNavigationBarContrastEnforced: false,
     );
 
+    final isLoaded = !_isInitializing && !bookState.isLoading && !bookState.hasError && bookState.hasValue;
+
+    final loadingTopBar = ReaderTopBar(
+      chapterTitle: _loadingTitle ?? 'Loading...',
+      config: readerState.config,
+      onBackPressed: () {
+        if (context.canPop()) {
+          context.pop();
+        }
+      },
+    );
+
+    final loadingBottomBar = ReaderBottomBar(
+      config: readerState.config,
+      progressText: 'Parsing book...',
+      chapters: const [],
+      currentChapterIndex: 0,
+      onChapterSelected: null,
+      bookTitle: _loadingTitle ?? 'Loading...',
+      author: _loadingAuthor,
+    );
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemOverlayStyle,
       child: Scaffold(
         backgroundColor: readerState.config.backgroundColor,
+        appBar: !isLoaded ? loadingTopBar : null,
+        bottomNavigationBar: !isLoaded ? loadingBottomBar : null,
         body: Stack(
           children: [
             // The Reader Surface
             if (_isInitializing)
-              Center(
-                child: CircularProgressIndicator(
-                  color: readerState.config.textColor.withValues(alpha: 0.5),
-                ),
-              )
+              const Center(child: AppLoadingIndicator())
             else
               bookState.when(
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: readerState.config.textColor.withValues(alpha: 0.5),
-                  ),
-                ),
+                loading: () => const Center(child: AppLoadingIndicator()),
               error: (err, stack) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
