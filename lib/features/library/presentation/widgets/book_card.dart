@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/theme/app_typography.dart';
 import '../../domain/models/book.dart';
 import '../providers/library_selection_provider.dart';
 
@@ -15,7 +14,7 @@ class BookCard extends ConsumerWidget {
     required this.book,
   });
 
-  Widget _buildFallbackCover() {
+  Widget _buildFallbackCover(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -33,9 +32,8 @@ class BookCard extends ConsumerWidget {
           child: Text(
             book.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: theme.textTheme.labelMedium?.copyWith(
               color: Colors.white,
-              fontSize: AppTypography.sm,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -77,7 +75,7 @@ class BookCard extends ConsumerWidget {
           ),
           margin: EdgeInsets.zero,
           elevation: isSelected ? 2 : 0,
-          color: isSelected ? colorScheme.primary : theme.cardColor,
+          color: isSelected ? colorScheme.primary : Colors.transparent,
           child: InkWell(
             onTap: handleTap,
             onLongPress: handleLongPress,
@@ -94,10 +92,10 @@ class BookCard extends ConsumerWidget {
                           Image.file(
                             File(book.coverPath!),
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildFallbackCover(),
+                            errorBuilder: (context, error, stackTrace) => _buildFallbackCover(theme),
                           )
                         else
-                          _buildFallbackCover(),
+                          _buildFallbackCover(theme),
                         // Progress bar at the bottom edge of the cover
                         Align(
                           alignment: Alignment.bottomCenter,
@@ -124,9 +122,8 @@ class BookCard extends ConsumerWidget {
                     book.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-                      fontSize: AppTypography.sm,
                       fontWeight: FontWeight.w500,
                       height: 1.2,
                     ),

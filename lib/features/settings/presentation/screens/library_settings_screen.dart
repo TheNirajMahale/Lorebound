@@ -23,20 +23,25 @@ class LibrarySettingsScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    RadioListTile<int?>(
-                      title: const Text('All Books (Default)'),
-                      value: null,
+                    RadioGroup<int?>(
                       groupValue: defaultId,
                       onChanged: (val) => Navigator.pop(context, val),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RadioListTile<int?>(
+                            title: const Text('All Books (Default)'),
+                            value: null,
+                          ),
+                          ...categories.map((c) {
+                            return RadioListTile<int?>(
+                              title: Text(c.name),
+                              value: c.id,
+                            );
+                          }),
+                        ],
+                      ),
                     ),
-                    ...categories.map((c) {
-                      return RadioListTile<int?>(
-                        title: Text(c.name),
-                        value: c.id,
-                        groupValue: defaultId,
-                        onChanged: (val) => Navigator.pop(context, val),
-                      );
-                    }),
                   ],
                 ),
               ),
@@ -132,25 +137,27 @@ class LibrarySettingsScreen extends ConsumerWidget {
       builder: (context) {
         return AlertDialog(
           title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: SwipeAction.values.where((action) => 
-              action == SwipeAction.markAsRead || 
-              action == SwipeAction.markAsUnread || 
-              action == SwipeAction.none
-            ).map((action) {
-              return RadioListTile<SwipeAction>(
-                title: Text(action.label),
-                value: action,
-                groupValue: currentValue,
-                onChanged: (value) {
-                  if (value != null) {
-                    onSelected(value);
-                    Navigator.of(context).pop();
-                  }
-                },
-              );
-            }).toList(),
+          content: RadioGroup<SwipeAction>(
+            groupValue: currentValue,
+            onChanged: (value) {
+              if (value != null) {
+                onSelected(value);
+                Navigator.of(context).pop();
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: SwipeAction.values.where((action) => 
+                action == SwipeAction.markAsRead || 
+                action == SwipeAction.markAsUnread || 
+                action == SwipeAction.none
+              ).map((action) {
+                return RadioListTile<SwipeAction>(
+                  title: Text(action.label),
+                  value: action,
+                );
+              }).toList(),
+            ),
           ),
           actions: [
             TextButton(

@@ -91,7 +91,7 @@ class AssignCategorySheet extends ConsumerWidget {
                           );
                         },
                         loading: () => const ListTile(title: Text('Loading...')),
-                        error: (_, __) => const ListTile(title: Text('Error')),
+                        error: (_, _) => const ListTile(title: Text('Error')),
                       );
                     },
                   ),

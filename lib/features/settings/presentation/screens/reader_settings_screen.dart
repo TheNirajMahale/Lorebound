@@ -37,7 +37,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
           ],
         ),
         itemCount: tabOrder.length,
-        onReorder: (oldIndex, newIndex) {
+        onReorderItem: (oldIndex, newIndex) {
           ref.read(readerTabOrderProvider.notifier).reorder(oldIndex, newIndex);
         },
         itemBuilder: (context, index) {

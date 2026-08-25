@@ -85,7 +85,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
                     const Text('What should happen to the books in this category?'),
                     const SizedBox(height: AppSpacing.sm),
                     DropdownButtonFormField<int?>(
-                      value: selectedReassignId,
+                      initialValue: selectedReassignId,
                       isExpanded: true,
                       decoration: const InputDecoration(border: OutlineInputBorder()),
                       items: [
@@ -152,11 +152,7 @@ class _CategoryManagementScreenState extends ConsumerState<CategoryManagementScr
             buildDefaultDragHandles: false,
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
             itemCount: combined.length,
-            onReorder: (oldIndex, newIndex) {
-              if (oldIndex < newIndex) {
-                newIndex -= 1;
-              }
-              
+            onReorderItem: (oldIndex, newIndex) {
               final item = combined.removeAt(oldIndex);
               combined.insert(newIndex, item);
               

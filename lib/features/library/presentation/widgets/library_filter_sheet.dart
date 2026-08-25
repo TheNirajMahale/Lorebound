@@ -141,26 +141,28 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        RadioListTile<SortType>(
-          title: const Text('Title'),
-          value: SortType.title,
+        RadioGroup<SortType>(
           groupValue: prefs.sortType,
           onChanged: (val) => val != null ? notifier.updateSortType(val) : null,
-          contentPadding: EdgeInsets.zero,
-        ),
-        RadioListTile<SortType>(
-          title: const Text('Last Read'),
-          value: SortType.lastRead,
-          groupValue: prefs.sortType,
-          onChanged: (val) => val != null ? notifier.updateSortType(val) : null,
-          contentPadding: EdgeInsets.zero,
-        ),
-        RadioListTile<SortType>(
-          title: const Text('Date Added'),
-          value: SortType.dateAdded,
-          groupValue: prefs.sortType,
-          onChanged: (val) => val != null ? notifier.updateSortType(val) : null,
-          contentPadding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              RadioListTile<SortType>(
+                title: const Text('Title'),
+                value: SortType.title,
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<SortType>(
+                title: const Text('Last Read'),
+                value: SortType.lastRead,
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<SortType>(
+                title: const Text('Date Added'),
+                value: SortType.dateAdded,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -176,29 +178,31 @@ class _LibraryFilterSheetState extends ConsumerState<LibraryFilterSheet> with Si
       children: [
         Text('Display Mode', style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
         const SizedBox(height: AppSpacing.sm),
-        RadioListTile<DisplayMode>(
-          title: const Text('Comfortable Grid'),
-          subtitle: const Text('Larger covers, 2 per row'),
-          value: DisplayMode.comfortableGrid,
+        RadioGroup<DisplayMode>(
           groupValue: prefs.displayMode,
           onChanged: (val) => val != null ? notifier.updateDisplayMode(val) : null,
-          contentPadding: EdgeInsets.zero,
-        ),
-        RadioListTile<DisplayMode>(
-          title: const Text('Compact Grid'),
-          subtitle: const Text('Smaller covers, 3 per row'),
-          value: DisplayMode.compactGrid,
-          groupValue: prefs.displayMode,
-          onChanged: (val) => val != null ? notifier.updateDisplayMode(val) : null,
-          contentPadding: EdgeInsets.zero,
-        ),
-        RadioListTile<DisplayMode>(
-          title: const Text('List'),
-          subtitle: const Text('Detailed view with reading progress'),
-          value: DisplayMode.list,
-          groupValue: prefs.displayMode,
-          onChanged: (val) => val != null ? notifier.updateDisplayMode(val) : null,
-          contentPadding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              RadioListTile<DisplayMode>(
+                title: const Text('Comfortable Grid'),
+                subtitle: const Text('Larger covers, 2 per row'),
+                value: DisplayMode.comfortableGrid,
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<DisplayMode>(
+                title: const Text('Compact Grid'),
+                subtitle: const Text('Smaller covers, 3 per row'),
+                value: DisplayMode.compactGrid,
+                contentPadding: EdgeInsets.zero,
+              ),
+              RadioListTile<DisplayMode>(
+                title: const Text('List'),
+                subtitle: const Text('Detailed view with reading progress'),
+                value: DisplayMode.list,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ],
+          ),
         ),
       ],
     );

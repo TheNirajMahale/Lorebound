@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart' as loreboundPath;
-import 'dart:io' as loreboundIo;
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'dart:io' as io;
 import 'package:permission_handler/permission_handler.dart';
 import '../../../library/data/repositories/local_book_repository.dart' as lorebound;
 
@@ -38,25 +38,25 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text('Format', style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold)),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: RadioListTile<String>(
-                  title: const Text('CSV'),
-                  value: 'csv',
-                  groupValue: _format,
-                  onChanged: (value) => setState(() => _format = value!),
+          RadioGroup<String>(
+            groupValue: _format,
+            onChanged: (value) => setState(() => _format = value!),
+            child: Row(
+              children: [
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text('CSV'),
+                    value: 'csv',
+                  ),
                 ),
-              ),
-              Expanded(
-                child: RadioListTile<String>(
-                  title: const Text('JSON'),
-                  value: 'json',
-                  groupValue: _format,
-                  onChanged: (value) => setState(() => _format = value!),
+                Expanded(
+                  child: RadioListTile<String>(
+                    title: const Text('JSON'),
+                    value: 'json',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           
           const Divider(),
@@ -109,7 +109,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                   final jsonString = await repository.exportLibraryJson();
                   
                   String exportPath;
-                  if (loreboundIo.Platform.isAndroid) {
+                  if (io.Platform.isAndroid) {
                     var status = await Permission.manageExternalStorage.request();
                     if (!status.isGranted) {
                       status = await Permission.storage.request();
@@ -120,17 +120,17 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                       throw Exception('Storage permission denied');
                     }
                   } else {
-                    final docDir = await loreboundPath.getApplicationDocumentsDirectory();
+                    final docDir = await path_provider.getApplicationDocumentsDirectory();
                     exportPath = '${docDir.path}/Lorebound';
                   }
 
-                  final dir = loreboundIo.Directory(exportPath);
+                  final dir = io.Directory(exportPath);
                   if (!await dir.exists()) {
                     await dir.create(recursive: true);
                   }
 
                   final timestamp = DateTime.now().millisecondsSinceEpoch;
-                  final file = loreboundIo.File('$exportPath/lorebound_backup_$timestamp.json');
+                  final file = io.File('$exportPath/lorebound_backup_$timestamp.json');
                   await file.writeAsString(jsonString);
                   
                   final String displayPath = file.path.replaceAll('/storage/emulated/0', 'Internal Storage').replaceAll('/', ' / ');

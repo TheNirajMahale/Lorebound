@@ -44,7 +44,7 @@ class DataStorageSettingsScreen extends ConsumerWidget {
               cacheSizeState.when(
                 data: (size) => 'Free up space used by temporary files ($size)',
                 loading: () => 'Calculating cache size...',
-                error: (_, __) => 'Free up space used by temporary files (Unknown)',
+                error: (_, _) => 'Free up space used by temporary files (Unknown)',
               ),
             ),
             trailing: cacheSizeState.isLoading 

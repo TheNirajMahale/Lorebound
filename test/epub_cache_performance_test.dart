@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lorebound/features/reader/data/services/epub_cache_service.dart';
@@ -91,7 +92,7 @@ void main() {
     final stopwatchZip = Stopwatch()..start();
     final bookDirect = await parserService.loadBookFromFile(dummyEpubFile.path);
     stopwatchZip.stop();
-    print('Direct Zip Parsing (100 chapters): ${stopwatchZip.elapsedMilliseconds} ms');
+    debugPrint('Direct Zip Parsing (100 chapters): ${stopwatchZip.elapsedMilliseconds} ms');
 
     // Clear RAM cache so it doesn't skew results
     // We can't access private _bookCache, so we just instantiate a new parser
@@ -101,19 +102,19 @@ void main() {
     final stopwatchSave = Stopwatch()..start();
     await cacheService.saveToCache(999, bookDirect);
     stopwatchSave.stop();
-    print('Saving to Cache: ${stopwatchSave.elapsedMilliseconds} ms');
+    debugPrint('Saving to Cache: ${stopwatchSave.elapsedMilliseconds} ms');
 
     // 3. Load from Cache
     final stopwatchLoad = Stopwatch()..start();
     final bookCache = await parserService2.loadBookFromFile(dummyEpubFile.path, bookId: 999);
     stopwatchLoad.stop();
-    print('Loading from Cache: ${stopwatchLoad.elapsedMilliseconds} ms');
+    debugPrint('Loading from Cache: ${stopwatchLoad.elapsedMilliseconds} ms');
 
     // Verify cache loaded correctly
     expect(bookCache.Chapters!.length, 100);
     
     final cacheSize = await cacheService.getCacheSize(999);
-    print('Cache size on disk: ${cacheSize / 1024} KB');
+    debugPrint('Cache size on disk: ${cacheSize / 1024} KB');
 
     // Analysis assertion
     expect(stopwatchLoad.elapsedMilliseconds, lessThan(stopwatchZip.elapsedMilliseconds));

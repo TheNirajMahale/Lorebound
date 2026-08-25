@@ -51,7 +51,7 @@ class _ReaderSettingsSheetState extends ConsumerState<ReaderSettingsSheet>
     final tabOrder = ref.watch(readerTabOrderProvider);
 
     return Material(
-      color: colorScheme.surface,
+      color: Colors.transparent,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.65,

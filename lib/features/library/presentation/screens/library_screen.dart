@@ -56,32 +56,36 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             final displayMode = ref.watch(libraryPreferencesProvider.select((p) => p.displayMode));
             
             if (displayMode == DisplayMode.list) {
-              return ListView.builder(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                itemCount: books.length,
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  return BookListTile(book: book);
-                },
+              return RepaintBoundary(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  itemCount: books.length,
+                  itemBuilder: (context, index) {
+                    final book = books[index];
+                    return BookListTile(book: book);
+                  },
+                ),
               );
             }
 
             final crossAxisCount = displayMode == DisplayMode.compactGrid ? 3 : 2;
             final childAspectRatio = displayMode == DisplayMode.compactGrid ? 0.65 : 0.70;
 
-            return GridView.builder(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                childAspectRatio: childAspectRatio,
-                crossAxisSpacing: AppSpacing.md,
-                mainAxisSpacing: AppSpacing.md,
+            return RepaintBoundary(
+              child: GridView.builder(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  childAspectRatio: childAspectRatio,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.md,
+                ),
+                itemCount: books.length,
+                itemBuilder: (context, index) {
+                  final book = books[index];
+                  return BookCard(book: book);
+                },
               ),
-              itemCount: books.length,
-              itemBuilder: (context, index) {
-                final book = books[index];
-                return BookCard(book: book);
-              },
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -226,7 +230,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   }
                   return chips;
                 },
-                error: (_, __) => showAllCat ? [
+                error: (_, _) => showAllCat ? [
                   ExpressiveChip(
                     label: 'All Books',
                     isSelected: categoryId == null,
