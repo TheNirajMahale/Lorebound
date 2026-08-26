@@ -11,8 +11,6 @@ import 'package:flutter/services.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  
   final prefs = await SharedPreferences.getInstance();
   
   runApp(
@@ -25,11 +23,24 @@ void main() async {
   );
 }
 
-class LoreboundApp extends ConsumerWidget {
+class LoreboundApp extends ConsumerStatefulWidget {
   const LoreboundApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoreboundApp> createState() => _LoreboundAppState();
+}
+
+class _LoreboundAppState extends ConsumerState<LoreboundApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeConfig = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
 

@@ -40,52 +40,62 @@ class BookDetailScreen extends ConsumerWidget {
     final bool isUnread = book.currentChapter == 0;
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(''),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'change_category') {
-                showModalBottomSheet(
-                  context: context,
-                  showDragHandle: true,
-                  builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
-                );
-              } else if (value == 'delete') {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Delete Book?'),
-                    content: const Text('This will permanently remove the book from your library and delete its local files. This cannot be undone.'),
-                    actions: [
-                      TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
-                      FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-                        onPressed: () => context.pop(true),
-                        child: const Text('Delete'),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const BackButton(),
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'change_category') {
+                    showModalBottomSheet(
+                      context: context,
+                      showDragHandle: true,
+                      builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
+                    );
+                  } else if (value == 'delete') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Book?'),
+                        content: const Text('This will permanently remove the book from your library and delete its local files. This cannot be undone.'),
+                        actions: [
+                          TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
+                            onPressed: () => context.pop(true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
                       ),
-                    ],
+                    );
+                    
+                    if (confirm == true && context.mounted) {
+                      ref.read(libraryControllerProvider.notifier).deleteBook(bookId);
+                      context.pop(); // Go back to library
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'change_category',
+                    child: Text('Change Category'),
                   ),
-                );
-                
-                if (confirm == true && context.mounted) {
-                  ref.read(libraryControllerProvider.notifier).deleteBook(bookId);
-                  context.pop(); // Go back to library
-                }
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'change_category',
-                child: Text('Change Category'),
-              ),
-              PopupMenuItem(
-                value: 'delete',
-                child: Text('Delete Book', style: TextStyle(color: colorScheme.error)),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete Book', style: TextStyle(color: colorScheme.error)),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        height: MediaQuery.paddingOf(context).bottom,
+        color: colorScheme.surface,
       ),
       body: CustomScrollView(
         slivers: [
