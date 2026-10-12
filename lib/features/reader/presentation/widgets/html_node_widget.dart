@@ -11,12 +11,16 @@ class HtmlNodeWidget extends ConsumerWidget {
   final dom.Node node;
   final EpubBook book;
   final bool isFirstNode;
+  final String? searchQuery;
+  final bool isCurrentMatch;
 
   const HtmlNodeWidget({
     super.key,
     required this.node,
     required this.book,
     this.isFirstNode = false,
+    this.searchQuery,
+    this.isCurrentMatch = false,
   });
 
   @override
@@ -91,10 +95,11 @@ class HtmlNodeWidget extends ConsumerWidget {
     } else if (node is dom.Text) {
       final text = node.text?.trim() ?? '';
       if (text.isEmpty) return const SizedBox.shrink();
+      final spans = _buildTextSpans(node);
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: _AnimatedText(
-          spans: [TextSpan(text: text)],
+          spans: spans.isNotEmpty ? spans : [TextSpan(text: text)],
           config: config,
           sizeMultiplier: 1.0,
         ),
@@ -178,7 +183,42 @@ class HtmlNodeWidget extends ConsumerWidget {
       final text = node.text;
       if (text.isNotEmpty) {
         final collapsed = text.replaceAll(RegExp(r'\s+'), ' ');
-        spans.add(TextSpan(text: collapsed, style: inheritedStyle));
+        if (searchQuery != null && searchQuery!.trim().isNotEmpty) {
+          final query = searchQuery!.trim();
+          final lowerCollapsed = collapsed.toLowerCase();
+          final lowerQuery = query.toLowerCase();
+          int startIndex = 0;
+          while (startIndex < collapsed.length) {
+            final matchIdx = lowerCollapsed.indexOf(lowerQuery, startIndex);
+            if (matchIdx == -1) {
+              spans.add(TextSpan(
+                text: collapsed.substring(startIndex),
+                style: inheritedStyle,
+              ));
+              break;
+            }
+            if (matchIdx > startIndex) {
+              spans.add(TextSpan(
+                text: collapsed.substring(startIndex, matchIdx),
+                style: inheritedStyle,
+              ));
+            }
+            final matchEnd = matchIdx + query.length;
+            spans.add(TextSpan(
+              text: collapsed.substring(matchIdx, matchEnd),
+              style: (inheritedStyle ?? const TextStyle()).copyWith(
+                backgroundColor: isCurrentMatch
+                    ? const Color(0xFFFF9800)
+                    : const Color(0x66FFC107),
+                color: isCurrentMatch ? Colors.black : null,
+                fontWeight: FontWeight.bold,
+              ),
+            ));
+            startIndex = matchEnd;
+          }
+        } else {
+          spans.add(TextSpan(text: collapsed, style: inheritedStyle));
+        }
       }
     } else if (node is dom.Element) {
       TextStyle style = inheritedStyle ?? const TextStyle();

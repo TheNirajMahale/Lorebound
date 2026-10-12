@@ -117,7 +117,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ListTile(
           leading: Icon(Icons.palette_outlined, color: colorScheme.onSurfaceVariant),
           title: const Text('Appearance'),
-          subtitle: const Text('Theme, date format, language'),
+          subtitle: const Text('Theme, date format'),
           onTap: () => context.push('/more/settings/appearance'),
         ),
         ListTile(

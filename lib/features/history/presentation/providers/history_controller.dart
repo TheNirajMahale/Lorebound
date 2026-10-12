@@ -20,8 +20,20 @@ class HistoryController extends AsyncNotifier<List<HistoryEntry>> {
   /// Delete history entries before a given cutoff.
   Future<void> deleteHistoryBefore(DateTime cutoff) async {
     await ref.read(readingHistoryRepositoryProvider).deleteHistoryBefore(cutoff);
-    // Re-fetch from DB instead of going through a loading state,
-    // which would flash an empty/black screen momentarily.
+    final updated = await ref.read(readingHistoryRepositoryProvider).getHistory();
+    state = AsyncData(updated);
+  }
+
+  /// Delete history entries after a given cutoff (recent time window).
+  Future<void> deleteHistoryAfter(DateTime cutoff) async {
+    await ref.read(readingHistoryRepositoryProvider).deleteHistoryAfter(cutoff);
+    final updated = await ref.read(readingHistoryRepositoryProvider).getHistory();
+    state = AsyncData(updated);
+  }
+
+  /// Delete history entries between start and end.
+  Future<void> deleteHistoryBetween(DateTime start, DateTime end) async {
+    await ref.read(readingHistoryRepositoryProvider).deleteHistoryBetween(start, end);
     final updated = await ref.read(readingHistoryRepositoryProvider).getHistory();
     state = AsyncData(updated);
   }
@@ -40,6 +52,14 @@ class HistoryController extends AsyncNotifier<List<HistoryEntry>> {
     // Optimistic removal from local state to avoid full reload
     state = AsyncValue.data(
       state.value?.where((e) => e.id != id).toList() ?? [],
+    );
+  }
+
+  /// Delete all history entries for a specific book.
+  Future<void> deleteHistoryForBook(int bookId) async {
+    await ref.read(readingHistoryRepositoryProvider).deleteHistoryForBook(bookId);
+    state = AsyncValue.data(
+      state.value?.where((e) => e.bookId != bookId).toList() ?? [],
     );
   }
 }

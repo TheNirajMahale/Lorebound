@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../library/data/repositories/local_book_repository.dart';
 import '../../../reader/data/services/epub_cache_service.dart';
-import '../../../library/data/local/app_database.dart';
+import '../../../../core/database/app_database.dart';
 
 class BookCacheInfo {
   final BookEntity book;

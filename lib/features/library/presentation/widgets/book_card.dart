@@ -67,72 +67,120 @@ class BookCard extends ConsumerWidget {
 
     return Stack(
       children: [
-        Card(
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-            side: isSelected ? BorderSide(color: colorScheme.primary, width: 3) : BorderSide.none,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm + 3),
+            border: Border.all(
+              color: isSelected ? colorScheme.primary : Colors.transparent,
+              width: 2.5,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
           ),
-          margin: EdgeInsets.zero,
-          elevation: isSelected ? 2 : 0,
-          color: isSelected ? colorScheme.primary : Colors.transparent,
-          child: InkWell(
-            onTap: handleTap,
-            onLongPress: handleLongPress,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (book.coverPath != null && book.coverPath!.isNotEmpty && File(book.coverPath!).existsSync())
-                          Image.file(
-                            File(book.coverPath!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildFallbackCover(theme),
-                          )
-                        else
-                          _buildFallbackCover(theme),
-                        // Progress bar at the bottom edge of the cover
-                        Align(
-                          alignment: Alignment.bottomCenter,
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            backgroundColor: Colors.transparent,
-                            minHeight: 4,
-                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+          child: Card(
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+            ),
+            margin: EdgeInsets.zero,
+            elevation: 0,
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: handleTap,
+              onLongPress: handleLongPress,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (book.coverPath != null && book.coverPath!.isNotEmpty && File(book.coverPath!).existsSync())
+                            Image.file(
+                              File(book.coverPath!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => _buildFallbackCover(theme),
+                            )
+                          else
+                            _buildFallbackCover(theme),
+                          // Progress bar at the bottom edge of the cover
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              backgroundColor: Colors.transparent,
+                              minHeight: 4,
+                              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                            ),
                           ),
-                        ),
-                        // Selection Scrim
-                        if (isSelected)
-                          Container(
-                            color: colorScheme.primary.withValues(alpha: 0.4),
-                          ),
-                      ],
+                          // Selection Scrim
+                          if (isSelected)
+                            Container(
+                              color: colorScheme.primary.withValues(alpha: 0.2),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.xs, AppSpacing.xs, AppSpacing.xs, AppSpacing.xs),
-                  color: isSelected ? colorScheme.primary : Colors.transparent,
-                  child: Text(
-                    book.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                      height: 1.2,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.fromLTRB(AppSpacing.xs, AppSpacing.xs, AppSpacing.xs, AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: isSelected ? colorScheme.primary : Colors.transparent,
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(AppSpacing.radiusSm)),
+                    ),
+                    child: Text(
+                      book.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        height: 1.2,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
+        // Selection Checkmark Badge
+        if (isSelected)
+          Positioned(
+            top: AppSpacing.xs,
+            right: AppSpacing.xs,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.check,
+                size: 14,
+                color: colorScheme.onPrimary,
+              ),
+            ),
+          ),
         // Unread Badge
         if (unreadCount > 0)
           Positioned(

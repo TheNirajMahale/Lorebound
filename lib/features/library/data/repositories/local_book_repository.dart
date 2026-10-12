@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../local/app_database.dart';
-import '../local/database_provider.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/database/database_provider.dart';
 import 'dart:convert';
 import 'package:drift/drift.dart' as drift;
 final localBookRepositoryProvider = Provider<LocalBookRepository>((ref) {

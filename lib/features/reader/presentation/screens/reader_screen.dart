@@ -6,8 +6,8 @@ import 'dart:async';
 import '../../../library/data/repositories/local_book_repository.dart';
 import '../providers/reader_controller.dart';
 import '../providers/reader_state_providers.dart';
-import '../widgets/native_scroll_reader.dart';
-import '../widgets/native_paginated_reader.dart';
+import '../widgets/scroll_reader.dart';
+import '../widgets/paginated_reader.dart';
 import '../widgets/reader_bars.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../domain/models/reader_config.dart';
@@ -15,6 +15,8 @@ import '../../../history/data/repositories/reading_history_repository.dart';
 import '../../../history/presentation/providers/history_controller.dart';
 import '../../../more/presentation/providers/more_provider.dart';
 import '../../data/services/epub_parser_service_provider.dart';
+import '../../../statistics/data/repositories/reading_statistics_repository.dart';
+import '../../../statistics/presentation/providers/statistics_controller.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   final int bookId;
@@ -32,13 +34,18 @@ class ReaderScreen extends ConsumerStatefulWidget {
   ConsumerState<ReaderScreen> createState() => _ReaderScreenState();
 }
 
-class _ReaderScreenState extends ConsumerState<ReaderScreen> {
+class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBindingObserver {
   Timer? _saveDebouncer;
   late final LocalBookRepository _repo;
+  ReadingStatisticsRepository? _statsRepo;
+  bool _isIncognito = false;
+  bool _isDisposing = false;
   ReaderProgress? _lastProgress;
   bool _isInitializing = true;
   String? _loadingTitle;
   String? _loadingAuthor;
+  DateTime _sessionStartTime = DateTime.now();
+  int _currentSessionChapter = -1;
 
   void _saveProgress(int chapterIndex, double progress) {
     if (widget.bookId < 0) return;
@@ -49,6 +56,33 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         _repo.updateBookProgress(widget.bookId, chapterIndex, progress.toString());
       }
     });
+  }
+
+  void _flushReadingSession() {
+    if (widget.bookId < 0 || _currentSessionChapter < 0) return;
+    
+    // Respect cached incognito mode (safe during dispose)
+    if (_isIncognito) return;
+
+    final statsRepo = _statsRepo;
+    if (statsRepo == null) return;
+
+    final now = DateTime.now();
+    final durationSeconds = now.difference(_sessionStartTime).inSeconds;
+    _sessionStartTime = now;
+
+    // Record session if at least 10 seconds spent in this chapter
+    if (durationSeconds >= 10) {
+      statsRepo.recordReadingSession(
+        bookId: widget.bookId,
+        chapterIndex: _currentSessionChapter,
+        durationSeconds: durationSeconds,
+      );
+      if (!_isDisposing && mounted) {
+        ref.invalidate(statisticsControllerProvider);
+        ref.invalidate(readingStatisticsProvider);
+      }
+    }
   }
   
   void _recordHistory(int chapterIndex) {
@@ -101,6 +135,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     
     // We must wait for the first frame to render before mutating watched providers.
     // Otherwise, Riverpod throws a StateError which is swallowed by the catch block,
@@ -113,11 +148,23 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       );
 
       _repo = ref.read(localBookRepositoryProvider);
+      _statsRepo = ref.read(readingStatisticsRepositoryProvider);
+      _isIncognito = ref.read(incognitoModeProvider);
 
       _loadBookInitialState().catchError((e) {
         debugPrint('Error during initialization: $e');
       });
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _flushReadingSession();
+    } else if (state == AppLifecycleState.resumed) {
+      _sessionStartTime = DateTime.now();
+    }
   }
 
   Future<void> _loadBookInitialState() async {
@@ -145,8 +192,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ref.read(readerProgressProvider.notifier).updateProgress(startChapter, startProgress);
         ref.read(readerBookProvider.notifier).loadBook(widget.filePath, isAsset: false, bookId: widget.bookId);
         
-        // Record initial opening in history
+        // Record initial opening in history and stats
         _recordHistory(startChapter);
+        _currentSessionChapter = startChapter;
+        _sessionStartTime = DateTime.now();
         
         setState(() {
           _isInitializing = false;
@@ -164,7 +213,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   @override
   void dispose() {
+    _isDisposing = true;
+    WidgetsBinding.instance.removeObserver(this);
     _saveDebouncer?.cancel();
+    _flushReadingSession();
     // Do one final immediate save on exit if we have a valid ID
     if (widget.bookId >= 0 && _lastProgress != null) {
       _repo.updateBookProgress(widget.bookId, _lastProgress!.chapterIndex, _lastProgress!.progress.toString());
@@ -176,12 +228,17 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _isIncognito = ref.watch(incognitoModeProvider);
+
     ref.listen(readerProgressProvider, (previous, next) {
       _lastProgress = next;
       if (previous?.chapterIndex != next.chapterIndex || previous?.progress != next.progress) {
         _saveProgress(next.chapterIndex, next.progress);
       }
       if (previous?.chapterIndex != next.chapterIndex && next.chapterIndex >= 0) {
+        _flushReadingSession();
+        _currentSessionChapter = next.chapterIndex;
+        _sessionStartTime = DateTime.now();
         _recordHistory(next.chapterIndex);
       }
     });
@@ -251,7 +308,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               data: (book) {
                 if (book != null) {
                   return readerState.config.mode == ReaderMode.scroll
-                      ? NativeScrollReader(
+                      ? ScrollReader(
                           key: ValueKey(book.hashCode),
                           book: book,
                           config: readerState.config,
@@ -261,7 +318,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                             }
                           },
                         )
-                      : NativePaginatedReader(
+                      : PaginatedReader(
                           key: ValueKey(book.hashCode),
                           book: book,
                           config: readerState.config,

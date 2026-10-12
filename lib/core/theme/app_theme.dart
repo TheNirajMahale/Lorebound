@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 import 'theme_config.dart';
@@ -11,7 +12,10 @@ ColorScheme _applyAmoledIfRequested(ColorScheme scheme, ThemeConfig config) {
   if (scheme.brightness == Brightness.dark && config.useAmoledBlack) {
     return scheme.copyWith(
       surface: const Color(0xFF000000), // Pure OLED black
-      surfaceContainerHighest: const Color(0xFF121212), // Deep grey cards
+      surfaceContainer: const Color(0xFF121212), // Deep grey cards
+      surfaceContainerHigh: const Color(0xFF181818),
+      surfaceContainerHighest: const Color(0xFF1E1E1E),
+      outlineVariant: const Color(0xFF2C2C2C),
     );
   }
   return scheme;
@@ -19,18 +23,27 @@ ColorScheme _applyAmoledIfRequested(ColorScheme scheme, ThemeConfig config) {
 
 /// Builds the master ThemeData
 ThemeData buildAppTheme(ColorScheme colorScheme) {
-  return ThemeData(
+  final isDark = colorScheme.brightness == Brightness.dark;
+  final baseTheme = ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
+    brightness: colorScheme.brightness,
     fontFamily: AppTypography.fontFamily,
+  );
+
+  final textTheme = GoogleFonts.plusJakartaSansTextTheme(baseTheme.textTheme);
+
+  return baseTheme.copyWith(
+    textTheme: textTheme,
     scaffoldBackgroundColor: colorScheme.surface,
     
     appBarTheme: AppBarTheme(
       backgroundColor: colorScheme.surface,
       foregroundColor: colorScheme.onSurface,
-      elevation: 0,
+      elevation: 2,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+      surfaceTintColor: colorScheme.surfaceTint,
       centerTitle: true,
-      surfaceTintColor: Colors.transparent,
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: colorScheme.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
@@ -43,11 +56,36 @@ ThemeData buildAppTheme(ColorScheme colorScheme) {
       ),
     ),
 
+    navigationBarTheme: NavigationBarThemeData(
+      elevation: 2,
+      backgroundColor: colorScheme.surface,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+      surfaceTintColor: colorScheme.surfaceTint,
+    ),
+
+    bottomAppBarTheme: BottomAppBarThemeData(
+      elevation: 2,
+      color: colorScheme.surface,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+      surfaceTintColor: colorScheme.surfaceTint,
+    ),
+
+    dividerTheme: DividerThemeData(
+      color: colorScheme.onSurface.withValues(alpha: 0.1),
+      thickness: 1,
+      space: 1,
+    ),
+
     cardTheme: CardThemeData(
-      color: colorScheme.surfaceContainerHighest,
-      elevation: 0,
+      color: colorScheme.surfaceContainer,
+      elevation: 1,
+      shadowColor: colorScheme.shadow.withValues(alpha: isDark ? 0.35 : 0.08),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+          width: 1,
+        ),
       ),
     ),
     

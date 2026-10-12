@@ -1,6 +1,6 @@
 class AppTypography {
-  // Font family — standard Roboto for now, can be updated later.
-  static const String fontFamily = 'Roboto';
+  // Font family — industry-standard Plus Jakarta Sans
+  static const String fontFamily = 'Plus Jakarta Sans';
 
   // Semantic Font Sizes
   static const double xs = 12; // Captions, tiny badges

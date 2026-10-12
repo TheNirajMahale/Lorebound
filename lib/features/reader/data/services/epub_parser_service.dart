@@ -6,7 +6,12 @@ import 'package:epubx/epubx.dart';
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'epub_cache_service.dart';
+
+final epubParserServiceProvider = Provider<EpubParserService>((ref) {
+  return EpubParserService(ref.watch(epubCacheServiceProvider));
+});
 
 class EpubParserService {
   final EpubCacheService _cacheService;

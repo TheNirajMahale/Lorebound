@@ -12,12 +12,12 @@ import '../providers/reader_state_providers.dart';
 import 'html_node_widget.dart';
 import 'reader_bars.dart';
 
-class NativePaginatedReader extends ConsumerStatefulWidget {
+class PaginatedReader extends ConsumerStatefulWidget {
   final EpubBook book;
   final ReaderConfig config;
   final VoidCallback onBackPressed;
 
-  const NativePaginatedReader({
+  const PaginatedReader({
     super.key,
     required this.book,
     required this.config,
@@ -25,11 +25,11 @@ class NativePaginatedReader extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<NativePaginatedReader> createState() =>
-      _NativePaginatedReaderState();
+  ConsumerState<PaginatedReader> createState() =>
+      _PaginatedReaderState();
 }
 
-class _NativePaginatedReaderState extends ConsumerState<NativePaginatedReader> {
+class _PaginatedReaderState extends ConsumerState<PaginatedReader> {
   late List<EpubChapter> _chapters;
   List<String> _cachedChapterTitles = [];
   int _currentChapterIndex = 0;
@@ -48,6 +48,14 @@ class _NativePaginatedReaderState extends ConsumerState<NativePaginatedReader> {
   double _initialProgress = 0.0;
   int _initialChapterIndex = 0;
   String _bookKey = '';
+
+  bool _isSearchOpen = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  int _matchCount = 0;
+  int _currentMatchIndex = 0;
+  List<int> _matchPageIndices = [];
+  int? _savedReadingPageIndex;
 
   @override
   void initState() {
@@ -85,11 +93,119 @@ class _NativePaginatedReaderState extends ConsumerState<NativePaginatedReader> {
   @override
   void dispose() {
     _pageController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
+  String _getNodeText(dom.Node node) {
+    if (node is dom.Text) {
+      return node.text;
+    } else if (node is dom.Element) {
+      return node.text;
+    }
+    return '';
+  }
+
+  void _openSearch() {
+    setState(() {
+      _isSearchOpen = true;
+      _savedReadingPageIndex = _currentPageIndex;
+    });
+  }
+
+  void _onSearchQueryChanged(String query) {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty || _currentChapterPages.isEmpty) {
+      setState(() {
+        _searchQuery = '';
+        _matchCount = 0;
+        _currentMatchIndex = 0;
+        _matchPageIndices = [];
+      });
+      return;
+    }
+
+    _savedReadingPageIndex ??= _currentPageIndex;
+
+    final lowerQuery = trimmed.toLowerCase();
+    final List<int> matchPages = [];
+
+    for (int p = 0; p < _currentChapterPages.length; p++) {
+      final page = _currentChapterPages[p];
+      for (final node in page.nodes) {
+        final text = _getNodeText(node).toLowerCase();
+        int startIndex = 0;
+        while (true) {
+          final idx = text.indexOf(lowerQuery, startIndex);
+          if (idx == -1) break;
+          matchPages.add(p);
+          startIndex = idx + lowerQuery.length;
+        }
+      }
+    }
+
+    setState(() {
+      _searchQuery = trimmed;
+      _matchCount = matchPages.length;
+      _currentMatchIndex = 0;
+      _matchPageIndices = matchPages;
+    });
+
+    if (matchPages.isNotEmpty) {
+      final targetPage = matchPages[0];
+      _jumpToSearchPage(targetPage);
+    }
+  }
+
+  void _jumpToSearchPage(int targetContentPageIndex) {
+    if (targetContentPageIndex < 0 || targetContentPageIndex >= _currentChapterPages.length) return;
+    setState(() {
+      _currentPageIndex = targetContentPageIndex;
+    });
+    _safeJumpToPage(targetContentPageIndex);
+  }
+
+  void _onNextMatch() {
+    if (_matchCount <= 1 || _matchPageIndices.isEmpty) return;
+    final nextIdx = (_currentMatchIndex + 1) % _matchCount;
+    setState(() {
+      _currentMatchIndex = nextIdx;
+    });
+    _jumpToSearchPage(_matchPageIndices[nextIdx]);
+  }
+
+  void _onPrevMatch() {
+    if (_matchCount <= 1 || _matchPageIndices.isEmpty) return;
+    final prevIdx = (_currentMatchIndex - 1 + _matchCount) % _matchCount;
+    setState(() {
+      _currentMatchIndex = prevIdx;
+    });
+    _jumpToSearchPage(_matchPageIndices[prevIdx]);
+  }
+
+  void _closeSearch() {
+    setState(() {
+      _isSearchOpen = false;
+      _searchController.clear();
+      _searchQuery = '';
+      _matchCount = 0;
+      _currentMatchIndex = 0;
+      _matchPageIndices = [];
+      _savedReadingPageIndex = null;
+    });
+  }
+
+  void _resumeReading() {
+    if (_savedReadingPageIndex != null) {
+      _jumpToSearchPage(_savedReadingPageIndex!);
+      setState(() {
+        _savedReadingPageIndex = null;
+      });
+    }
+  }
+
   @override
-  void didUpdateWidget(NativePaginatedReader oldWidget) {
+  void didUpdateWidget(PaginatedReader oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.config.fontSize != widget.config.fontSize ||
         oldWidget.config.lineSpacing != widget.config.lineSpacing ||
@@ -367,6 +483,15 @@ class _NativePaginatedReaderState extends ConsumerState<NativePaginatedReader> {
         chapterTitle: chapterTitle,
         config: widget.config,
         onBackPressed: widget.onBackPressed,
+        onSearchTap: _openSearch,
+        isSearchOpen: _isSearchOpen,
+        searchController: _searchController,
+        onCloseSearch: _closeSearch,
+        onSearchQueryChanged: _onSearchQueryChanged,
+        matchCount: _matchCount,
+        currentMatchIndex: _currentMatchIndex,
+        onNextMatch: _onNextMatch,
+        onPrevMatch: _onPrevMatch,
       ),
       bottomNavigationBar: ReaderBottomBar(
         config: widget.config,
@@ -498,10 +623,14 @@ class _NativePaginatedReaderState extends ConsumerState<NativePaginatedReader> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: page.nodes.asMap().entries.map((entry) {
+                                final isTargetPage = (_matchPageIndices.isNotEmpty &&
+                                    _matchPageIndices[_currentMatchIndex] == contentIndex);
                                 return HtmlNodeWidget(
                                   node: entry.value,
                                   book: widget.book,
                                   isFirstNode: entry.key == 0,
+                                  searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+                                  isCurrentMatch: isTargetPage,
                                 );
                               }).toList(),
                             ),
@@ -520,6 +649,61 @@ class _NativePaginatedReaderState extends ConsumerState<NativePaginatedReader> {
                       ),
                     ),
                   ),
+                Positioned(
+                  bottom: 16.0,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: AnimatedSlide(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      offset: (_savedReadingPageIndex != null && _savedReadingPageIndex != _currentPageIndex)
+                          ? Offset.zero
+                          : const Offset(0, 1.5),
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: (_savedReadingPageIndex != null && _savedReadingPageIndex != _currentPageIndex)
+                            ? 1.0
+                            : 0.0,
+                        child: IgnorePointer(
+                          ignoring: !(_savedReadingPageIndex != null && _savedReadingPageIndex != _currentPageIndex),
+                          child: Material(
+                            elevation: 6.0,
+                            borderRadius: BorderRadius.circular(24.0),
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            shadowColor: Colors.black45,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(24.0),
+                              onTap: _resumeReading,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.history_rounded,
+                                      size: 18,
+                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Resume reading',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             );
           },

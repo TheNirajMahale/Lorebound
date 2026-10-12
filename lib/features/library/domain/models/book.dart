@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../../data/local/app_database.dart';
+import '../../../../core/database/app_database.dart';
 
 class Book {
   final int id;

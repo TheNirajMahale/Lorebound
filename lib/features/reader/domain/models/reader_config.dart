@@ -22,6 +22,8 @@ class ReaderConfig {
   final double brightness;
   final TextAlign textAlignment;
   final FontWeight fontWeight;
+  final bool autoScrollEnabled;
+  final double autoScrollSpeed;
 
   const ReaderConfig({
     this.mode = ReaderMode.scroll,
@@ -32,6 +34,8 @@ class ReaderConfig {
     this.brightness = 1.0,
     this.textAlignment = TextAlign.left,
     this.fontWeight = FontWeight.normal,
+    this.autoScrollEnabled = false,
+    this.autoScrollSpeed = 40.0,
   });
 
   ReaderConfig copyWith({
@@ -43,6 +47,8 @@ class ReaderConfig {
     double? brightness,
     TextAlign? textAlignment,
     FontWeight? fontWeight,
+    bool? autoScrollEnabled,
+    double? autoScrollSpeed,
   }) {
     return ReaderConfig(
       mode: mode ?? this.mode,
@@ -53,6 +59,8 @@ class ReaderConfig {
       brightness: brightness ?? this.brightness,
       textAlignment: textAlignment ?? this.textAlignment,
       fontWeight: fontWeight ?? this.fontWeight,
+      autoScrollEnabled: autoScrollEnabled ?? this.autoScrollEnabled,
+      autoScrollSpeed: autoScrollSpeed ?? this.autoScrollSpeed,
     );
   }
 

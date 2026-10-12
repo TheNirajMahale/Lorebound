@@ -8,7 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:drift/drift.dart' as drift;
 import '../../domain/models/book.dart';
 import '../repositories/local_book_repository.dart';
-import '../local/app_database.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../reader/data/services/epub_parser_service.dart';
 import '../../../reader/data/services/epub_parser_service_provider.dart';
 import '../../../reader/data/services/epub_cache_service.dart';

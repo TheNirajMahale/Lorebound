@@ -5,6 +5,8 @@ import '../../../../core/theme/theme_provider.dart';
 import '../../../../core/theme/presets/preset_catalog.dart';
 import '../widgets/theme_preset_card.dart';
 import '../widgets/dynamic_color_card.dart';
+import '../../domain/models/date_format_preference.dart';
+import '../providers/date_format_controller.dart';
 
 class AppearanceSettingsScreen extends ConsumerWidget {
   const AppearanceSettingsScreen({super.key});
@@ -125,23 +127,51 @@ class AppearanceSettingsScreen extends ConsumerWidget {
           ),
           
           ListTile(
-            title: const Text('App language'),
-            subtitle: const Text('English'),
-            onTap: () {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
-              );
-            },
-          ),
-          
-          ListTile(
             title: const Text('Date format'),
-            subtitle: const Text('Default'),
+            subtitle: Text(ref.watch(dateFormatProvider).label),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
             onTap: () {
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
+              final currentPref = ref.read(dateFormatProvider);
+              showModalBottomSheet(
+                context: context,
+                showDragHandle: true,
+                builder: (ctx) => SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xs),
+                          child: Text(
+                            'Date Format',
+                            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const Divider(),
+                        ...DateFormatPreference.values.map((pref) {
+                          final isSelected = pref == currentPref;
+                          return ListTile(
+                            leading: Icon(
+                              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                              color: isSelected
+                                  ? Theme.of(ctx).colorScheme.primary
+                                  : Theme.of(ctx).colorScheme.onSurfaceVariant,
+                            ),
+                            title: Text(pref.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: Text('Example: ${pref.format(DateTime.now())}'),
+                            selected: isSelected,
+                            onTap: () {
+                              ref.read(dateFormatProvider.notifier).updatePreference(pref);
+                              Navigator.of(ctx).pop();
+                            },
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
               );
             },
           ),

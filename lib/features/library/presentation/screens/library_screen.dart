@@ -72,12 +72,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final isKeyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final canPop = !isSelectionMode && !isKeyboardOpen;
+
     return PopScope(
-      // Intercept back press: if in selection mode, cancel selection instead of navigating back
-      canPop: !isSelectionMode,
+      canPop: canPop,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && isSelectionMode) {
+        if (didPop) return;
+        if (isSelectionMode) {
           ref.read(librarySelectionProvider.notifier).clearSelection();
+          return;
+        }
+        if (isKeyboardOpen) {
+          FocusScope.of(context).unfocus();
         }
       },
       child: Scaffold(
@@ -445,6 +452,8 @@ class SelectionBottomBar extends ConsumerWidget {
     final selectedBookIds = ref.watch(librarySelectionProvider);
 
     return BottomAppBar(
+      elevation: 3,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.25),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [

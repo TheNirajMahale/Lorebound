@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../library/data/local/app_database.dart';
-import '../../../library/data/local/database_provider.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../../core/database/database_provider.dart';
 import '../../domain/models/history_entry.dart';
 
 /// Repository for reading history CRUD operations.
@@ -62,10 +62,29 @@ class ReadingHistoryRepository {
         .go();
   }
 
+  /// Delete all history entries recorded on or after a given cutoff time (recent duration).
+  Future<void> deleteHistoryAfter(DateTime cutoff) async {
+    await (_db.delete(_db.readingHistories)
+          ..where((h) => h.readAt.isBiggerOrEqualValue(cutoff)))
+        .go();
+  }
+
+  /// Delete all history entries between start and end timestamps.
+  Future<void> deleteHistoryBetween(DateTime start, DateTime end) async {
+    await (_db.delete(_db.readingHistories)
+          ..where((h) => h.readAt.isBiggerOrEqualValue(start) & h.readAt.isSmallerOrEqualValue(end)))
+        .go();
+  }
+
   /// Delete a single history entry by ID.
   Future<void> deleteHistoryEntry(int id) async {
     await (_db.delete(_db.readingHistories)..where((h) => h.id.equals(id)))
         .go();
+  }
+
+  /// Delete all history entries for a specific book.
+  Future<void> deleteHistoryForBook(int bookId) async {
+    await (_db.delete(_db.readingHistories)..where((h) => h.bookId.equals(bookId))).go();
   }
 
   /// Delete all history entries.

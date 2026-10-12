@@ -8,6 +8,7 @@ import '../../data/repositories/local_book_repository.dart';
 import '../providers/library_controller.dart';
 import '../providers/book_chapters_provider.dart';
 import '../widgets/assign_category_sheet.dart';
+import '../widgets/book_search_sheet.dart';
 import '../../domain/models/book.dart';
 import '../../../settings/domain/models/chapter_swipe_config.dart';
 import '../../../settings/presentation/providers/chapter_swipe_provider.dart';
@@ -47,45 +48,65 @@ class BookDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const BackButton(),
-              PopupMenuButton<String>(
-                onSelected: (value) async {
-                  if (value == 'change_category') {
-                    showModalBottomSheet(
-                      context: context,
-                      showDragHandle: true,
-                      builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
-                    );
-                  } else if (value == 'delete') {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Book?'),
-                        content: const Text('This will permanently remove the book from your library and delete its local files. This cannot be undone.'),
-                        actions: [
-                          TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
-                          FilledButton(
-                            style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-                            onPressed: () => context.pop(true),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-                    
-                    if (confirm == true && context.mounted) {
-                      ref.read(libraryControllerProvider.notifier).deleteBook(bookId);
-                      context.pop(); // Go back to library
-                    }
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'change_category',
-                    child: Text('Change Category'),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
+                    tooltip: 'Search in book',
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => BookSearchSheet(book: book),
+                      );
+                    },
                   ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete Book', style: TextStyle(color: colorScheme.error)),
+                  PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      if (value == 'change_category') {
+                        showModalBottomSheet(
+                          context: context,
+                          showDragHandle: true,
+                          builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
+                        );
+                      } else if (value == 'delete') {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Book?'),
+                            content: const Text(
+                              'This will permanently remove the book from your library and delete its local files. This cannot be undone.',
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
+                              FilledButton(
+                                style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
+                                onPressed: () => context.pop(true),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true && context.mounted) {
+                          ref.read(libraryControllerProvider.notifier).deleteBook(bookId);
+                          context.pop(); // Go back to library
+                        }
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'change_category',
+                        child: Text('Change Category'),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete Book', style: TextStyle(color: colorScheme.error)),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -318,6 +339,10 @@ class BookDetailScreen extends ConsumerWidget {
 
           return Dismissible(
             key: ValueKey('${book.id}_chapter_$index'),
+            dismissThresholds: const {
+              DismissDirection.startToEnd: 0.35,
+              DismissDirection.endToStart: 0.35,
+            },
             background: buildBackground(swipeConfig.swipeLeft, Alignment.centerLeft),
             secondaryBackground: buildBackground(swipeConfig.swipeRight, Alignment.centerRight),
             confirmDismiss: (direction) async {
@@ -327,26 +352,28 @@ class BookDetailScreen extends ConsumerWidget {
                   
               if (action == SwipeAction.none) return false;
               
-              if (action == SwipeAction.markAsRead) {
-                // If marking as read, the current chapter becomes the NEXT chapter index
-                await ref.read(localBookRepositoryProvider).updateBookProgress(book.id, index + 1, '0.0');
-                ref.read(libraryControllerProvider.notifier).refresh();
-              } else if (action == SwipeAction.markAsUnread) {
-                // If marking as unread, the current chapter becomes THIS chapter index
-                await ref.read(localBookRepositoryProvider).updateBookProgress(book.id, index, '0.0');
-                ref.read(libraryControllerProvider.notifier).refresh();
+              // Execute the update asynchronously so the snap-back animation is never interrupted
+              Future.microtask(() async {
+                if (action == SwipeAction.markAsRead) {
+                  await ref.read(localBookRepositoryProvider).updateBookProgress(book.id, index + 1, '0.0');
+                  ref.read(libraryControllerProvider.notifier).refresh();
+                } else if (action == SwipeAction.markAsUnread) {
+                  await ref.read(localBookRepositoryProvider).updateBookProgress(book.id, index, '0.0');
+                  ref.read(libraryControllerProvider.notifier).refresh();
+                }
+              });
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${action.label} - Chapter ${index + 1}'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
               }
               
-              if (!context.mounted) return false;
-              
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${action.label} - Chapter ${index + 1}'),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-              
-              // We return false because we don't actually want to remove the item from the list
+              // Immediately return false so Dismissible cleanly springs back to normal chapter title
               return false;
             },
             child: ListTile(
