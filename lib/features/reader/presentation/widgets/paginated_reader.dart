@@ -1,16 +1,21 @@
-import 'dart:typed_data';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:epubx/epubx.dart' hide Image;
 import 'package:html/dom.dart' as dom;
 import '../../domain/models/reader_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/reader_page.dart';
 import '../../data/services/page_chunker_service.dart';
-import '../../data/services/epub_parser_service_provider.dart';
+import '../../data/services/epub_parser_service.dart';
 import '../../data/services/book_storage_service.dart';
 import '../providers/reader_state_providers.dart';
+import '../providers/reader_controller.dart';
 import 'html_node_widget.dart';
 import 'reader_bars.dart';
+import 'reader_floating_toolbar.dart';
+import 'reader_text_selection_controls.dart';
+import '../providers/reader_selection_controller.dart';
 
 class PaginatedReader extends ConsumerStatefulWidget {
   final EpubBook book;
@@ -56,6 +61,9 @@ class _PaginatedReaderState extends ConsumerState<PaginatedReader> {
   int _currentMatchIndex = 0;
   List<int> _matchPageIndices = [];
   int? _savedReadingPageIndex;
+  String _selectedText = '';
+  Timer? _lookupDebouncer;
+  final FocusNode _selectionFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -92,6 +100,8 @@ class _PaginatedReaderState extends ConsumerState<PaginatedReader> {
 
   @override
   void dispose() {
+    _selectionFocusNode.dispose();
+    _lookupDebouncer?.cancel();
     _pageController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -620,19 +630,70 @@ class _PaginatedReaderState extends ConsumerState<PaginatedReader> {
                         child: ClipRect(
                           child: SingleChildScrollView(
                             physics: const NeverScrollableScrollPhysics(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: page.nodes.asMap().entries.map((entry) {
-                                final isTargetPage = (_matchPageIndices.isNotEmpty &&
-                                    _matchPageIndices[_currentMatchIndex] == contentIndex);
-                                return HtmlNodeWidget(
-                                  node: entry.value,
-                                  book: widget.book,
-                                  isFirstNode: entry.key == 0,
-                                  searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
-                                  isCurrentMatch: isTargetPage,
+                            child: SelectionArea(
+                              focusNode: _selectionFocusNode,
+                              selectionControls: ReaderTextSelectionControls(
+                                isExpanded: ref.watch(readerSelectionControllerProvider).isExpanded,
+                              ),
+                              onSelectionChanged: (content) {
+                                final newText = content?.plainText ?? '';
+                                _lookupDebouncer?.cancel();
+                                // When card is in expanded/full-screen mode, focus loss from handle suppression must not dismiss the card.
+                                if (ref.read(readerSelectionControllerProvider).isExpanded) {
+                                  return;
+                                }
+                                _selectedText = newText;
+                                if (_selectedText.trim().isEmpty) {
+                                  ref.read(readerSelectionControllerProvider.notifier).dismiss();
+                                } else {
+                                  final config = ref.read(readerControllerProvider).config;
+                                  if (config.autoLookupOnSelection) {
+                                    _lookupDebouncer = Timer(const Duration(milliseconds: 300), () {
+                                      if (mounted && _selectedText.trim().isNotEmpty) {
+                                        ref.read(readerSelectionControllerProvider.notifier).showPeeking(
+                                          text: _selectedText.trim(),
+                                          onClearSelection: () {
+                                            if (mounted && _selectionFocusNode.hasFocus) {
+                                              _selectionFocusNode.unfocus();
+                                            }
+                                          },
+                                        );
+                                      }
+                                    });
+                                  }
+                                }
+                              },
+                              contextMenuBuilder: (context, selectableRegionState) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted) {
+                                    ref.read(readerSelectionControllerProvider.notifier).registerHideToolbarCallback(selectableRegionState.hideToolbar);
+                                    ref.read(readerSelectionControllerProvider.notifier).registerClearSelectionCallback(() {
+                                      if (mounted && _selectionFocusNode.hasFocus) {
+                                        _selectionFocusNode.unfocus();
+                                      }
+                                    });
+                                  }
+                                });
+                                return ReaderReactiveContextMenu(
+                                  selectableRegionState: selectableRegionState,
+                                  selectedText: _selectedText,
+                                  focusNode: _selectionFocusNode,
                                 );
-                              }).toList(),
+                              },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: page.nodes.asMap().entries.map((entry) {
+                                  final isTargetPage = (_matchPageIndices.isNotEmpty &&
+                                      _matchPageIndices[_currentMatchIndex] == contentIndex);
+                                  return HtmlNodeWidget(
+                                    node: entry.value,
+                                    book: widget.book,
+                                    isFirstNode: entry.key == 0,
+                                    searchQuery: _searchQuery.isNotEmpty ? _searchQuery : null,
+                                    isCurrentMatch: isTargetPage,
+                                  );
+                                }).toList(),
+                              ),
                             ),
                           ),
                         ),
@@ -671,7 +732,7 @@ class _PaginatedReaderState extends ConsumerState<PaginatedReader> {
                             elevation: 6.0,
                             borderRadius: BorderRadius.circular(24.0),
                             color: Theme.of(context).colorScheme.primaryContainer,
-                            shadowColor: Colors.black45,
+                            shadowColor: widget.config.shadowColor,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(24.0),
                               onTap: _resumeReading,

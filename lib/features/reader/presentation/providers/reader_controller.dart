@@ -36,6 +36,8 @@ class ReaderController extends Notifier<ReaderState> {
   static const _keyBrightness = 'reader_brightness';
   static const _keyTextAlignment = 'reader_text_alignment';
   static const _keyFontWeight = 'reader_font_weight';
+  static const _keyBionicReading = 'reader_bionic_reading';
+  static const _keyAutoLookup = 'reader_auto_lookup';
 
   @override
   ReaderState build() {
@@ -45,6 +47,8 @@ class ReaderController extends Notifier<ReaderState> {
     final themeIndex = prefs.getInt(_keyTheme);
     final alignmentIndex = prefs.getInt(_keyTextAlignment);
     final weightIndex = prefs.getInt(_keyFontWeight);
+    final bionicEnabled = prefs.getBool(_keyBionicReading) ?? false;
+    final autoLookup = prefs.getBool(_keyAutoLookup) ?? true;
 
     final config = ReaderConfig(
       mode: modeIndex != null && modeIndex < ReaderMode.values.length ? ReaderMode.values[modeIndex] : ReaderMode.scroll,
@@ -55,6 +59,8 @@ class ReaderController extends Notifier<ReaderState> {
       brightness: prefs.getDouble(_keyBrightness) ?? 1.0,
       textAlignment: alignmentIndex != null && alignmentIndex < TextAlign.values.length ? TextAlign.values[alignmentIndex] : TextAlign.left,
       fontWeight: weightIndex != null ? FontWeight.values.firstWhere((w) => w.value == weightIndex, orElse: () => FontWeight.normal) : FontWeight.normal,
+      bionicReadingEnabled: bionicEnabled,
+      autoLookupOnSelection: autoLookup,
     );
 
     return ReaderState(config: config);
@@ -72,6 +78,8 @@ class ReaderController extends Notifier<ReaderState> {
     prefs.setDouble(_keyBrightness, newConfig.brightness);
     prefs.setInt(_keyTextAlignment, newConfig.textAlignment.index);
     prefs.setInt(_keyFontWeight, newConfig.fontWeight.value);
+    prefs.setBool(_keyBionicReading, newConfig.bionicReadingEnabled);
+    prefs.setBool(_keyAutoLookup, newConfig.autoLookupOnSelection);
   }
 
   void loadBookFromAsset(String assetPath) {

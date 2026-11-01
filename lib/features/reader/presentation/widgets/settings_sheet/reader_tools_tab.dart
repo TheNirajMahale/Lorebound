@@ -24,6 +24,16 @@ class ReaderToolsTab extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
+        // Automation
+        Text(
+          'Automation',
+          style: TextStyle(
+            fontSize: AppTypography.sm,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         if (config.mode == ReaderMode.scroll)
           AnimatedContainer(
             duration: const Duration(milliseconds: 250),
@@ -125,23 +135,75 @@ class ReaderToolsTab extends ConsumerWidget {
               ),
             ),
             subtitle: Text(
-              'Only available in continuous vertical scroll mode (Layout tab)',
+              'Available in vertical scroll mode (Layout tab)',
               style: TextStyle(
                 fontSize: AppTypography.xs,
                 color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
             ),
           ),
-        const SizedBox(height: AppSpacing.md),
-        ListTile(
-          shape: RoundedRectangleBorder(
+        const SizedBox(height: AppSpacing.lg),
+
+        // Reading Assistance (RuneGlass)
+        Text(
+          'Reading Assistance (RuneGlass)',
+          style: TextStyle(
+            fontSize: AppTypography.sm,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
           ),
-          tileColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          leading: const Icon(Icons.auto_awesome_rounded),
-          title: const Text('RuneGlass Reading Assistant'),
-          subtitle: const Text('Bionic reading & dictionary lookup (Phase 7)'),
-          trailing: const Chip(label: Text('Phase 7')),
+          child: Column(
+            children: [
+              SwitchListTile(
+                secondary: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: config.bionicReadingEnabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                ),
+                title: const Text('Bionic Reading'),
+                subtitle: Text(
+                  config.bionicReadingEnabled
+                      ? 'High-contrast fixation anchors enabled for speed reading'
+                      : 'Emphasize initial letters for faster eye tracking',
+                  style: TextStyle(
+                    fontSize: AppTypography.xs,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                value: config.bionicReadingEnabled,
+                onChanged: (val) {
+                  notifier.updateConfig(config.copyWith(bionicReadingEnabled: val));
+                },
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                secondary: Icon(
+                  Icons.translate_rounded,
+                  color: config.autoLookupOnSelection ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                ),
+                title: const Text('Auto-Lookup on Selection'),
+                subtitle: Text(
+                  config.autoLookupOnSelection
+                      ? 'Display quick bottom card when selecting words'
+                      : 'Show standard toolbar only (tap Dictionary to open)',
+                  style: TextStyle(
+                    fontSize: AppTypography.xs,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                value: config.autoLookupOnSelection,
+                onChanged: (val) {
+                  notifier.updateConfig(config.copyWith(autoLookupOnSelection: val));
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );

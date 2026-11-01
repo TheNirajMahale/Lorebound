@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:epubx/epubx.dart';
-import '../../data/services/epub_parser_service_provider.dart';
+import '../../data/services/epub_parser_service.dart';
 
 // --- Progress State ---
 class ReaderProgress {
@@ -93,3 +93,15 @@ class ReaderBookNotifier extends AsyncNotifier<EpubBook?> {
 final readerBookProvider = AsyncNotifierProvider.autoDispose<ReaderBookNotifier, EpubBook?>(() {
   return ReaderBookNotifier();
 });
+
+class CurrentBookIdNotifier extends Notifier<int> {
+  @override
+  int build() => -1;
+
+  void setBookId(int id) => state = id;
+}
+
+/// Active book ID being read in ReaderScreen
+final currentBookIdProvider =
+    NotifierProvider<CurrentBookIdNotifier, int>(CurrentBookIdNotifier.new);
+

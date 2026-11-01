@@ -3,10 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:epubx/epubx.dart';
 import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import 'html_node_widget.dart';
+import 'reader_floating_toolbar.dart';
+import 'reader_text_selection_controls.dart';
+import '../providers/reader_controller.dart';
+import '../providers/reader_selection_controller.dart';
 
-class ChapterScrollView extends StatefulWidget {
+class ChapterScrollView extends ConsumerStatefulWidget {
   final EpubChapter chapter;
   final EpubBook book;
   final double topPadding;
@@ -19,6 +24,7 @@ class ChapterScrollView extends StatefulWidget {
   final VoidCallback? onResumeCompleted;
   final bool autoScrollEnabled;
   final double autoScrollSpeed;
+  final int chapterIndex;
 
   const ChapterScrollView({
     super.key,
@@ -34,10 +40,11 @@ class ChapterScrollView extends StatefulWidget {
     this.onResumeCompleted,
     this.autoScrollEnabled = false,
     this.autoScrollSpeed = 40.0,
+    this.chapterIndex = 0,
   });
 
   @override
-  State<ChapterScrollView> createState() => _ChapterScrollViewState();
+  ConsumerState<ChapterScrollView> createState() => _ChapterScrollViewState();
 }
 
 class _ChapterMatch {
@@ -52,7 +59,7 @@ class _ChapterMatch {
   });
 }
 
-class _ChapterScrollViewState extends State<ChapterScrollView> {
+class _ChapterScrollViewState extends ConsumerState<ChapterScrollView> {
   List<dom.Node> _parsedNodes = [];
   List<int> _cumulativeChars = [];
   int _totalChars = 1;
@@ -63,6 +70,9 @@ class _ChapterScrollViewState extends State<ChapterScrollView> {
   bool _initialProgressRestored = false;
   Timer? _autoScrollTimer;
   bool _userInteracting = false;
+  String _selectedText = '';
+  Timer? _lookupDebouncer;
+  final FocusNode _selectionFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -75,6 +85,8 @@ class _ChapterScrollViewState extends State<ChapterScrollView> {
 
   @override
   void dispose() {
+    _selectionFocusNode.dispose();
+    _lookupDebouncer?.cancel();
     _autoScrollTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
@@ -327,18 +339,69 @@ class _ChapterScrollViewState extends State<ChapterScrollView> {
                 left: 24.0,
                 right: 24.0,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: List.generate(_parsedNodes.length, (index) {
-                  final isCurrentMatchNode = (_currentMatchNodeIndex == index);
-                  return HtmlNodeWidget(
-                    node: _parsedNodes[index],
-                    book: widget.book,
-                    isFirstNode: index == 0,
-                    searchQuery: widget.searchQuery,
-                    isCurrentMatch: isCurrentMatchNode,
+              child: SelectionArea(
+                focusNode: _selectionFocusNode,
+                selectionControls: ReaderTextSelectionControls(
+                  isExpanded: ref.watch(readerSelectionControllerProvider).isExpanded,
+                ),
+                onSelectionChanged: (content) {
+                  final newText = content?.plainText ?? '';
+                  _lookupDebouncer?.cancel();
+                  // When card is in expanded/full-screen mode, focus loss from handle suppression must not dismiss the card.
+                  if (ref.read(readerSelectionControllerProvider).isExpanded) {
+                    return;
+                  }
+                  _selectedText = newText;
+                  if (_selectedText.trim().isEmpty) {
+                    ref.read(readerSelectionControllerProvider.notifier).dismiss();
+                  } else {
+                    final config = ref.read(readerControllerProvider).config;
+                    if (config.autoLookupOnSelection) {
+                      _lookupDebouncer = Timer(const Duration(milliseconds: 300), () {
+                        if (mounted && _selectedText.trim().isNotEmpty) {
+                          ref.read(readerSelectionControllerProvider.notifier).showPeeking(
+                            text: _selectedText.trim(),
+                            onClearSelection: () {
+                              if (mounted && _selectionFocusNode.hasFocus) {
+                                _selectionFocusNode.unfocus();
+                              }
+                            },
+                          );
+                        }
+                      });
+                    }
+                  }
+                },
+                contextMenuBuilder: (context, selectableRegionState) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      ref.read(readerSelectionControllerProvider.notifier).registerHideToolbarCallback(selectableRegionState.hideToolbar);
+                      ref.read(readerSelectionControllerProvider.notifier).registerClearSelectionCallback(() {
+                        if (mounted && _selectionFocusNode.hasFocus) {
+                          _selectionFocusNode.unfocus();
+                        }
+                      });
+                    }
+                  });
+                  return ReaderReactiveContextMenu(
+                    selectableRegionState: selectableRegionState,
+                    selectedText: _selectedText,
+                    focusNode: _selectionFocusNode,
                   );
-                }),
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: List.generate(_parsedNodes.length, (index) {
+                    final isCurrentMatchNode = (_currentMatchNodeIndex == index);
+                    return HtmlNodeWidget(
+                      node: _parsedNodes[index],
+                      book: widget.book,
+                      isFirstNode: index == 0,
+                      searchQuery: widget.searchQuery,
+                      isCurrentMatch: isCurrentMatchNode,
+                    );
+                  }),
+                ),
               ),
             );
           },

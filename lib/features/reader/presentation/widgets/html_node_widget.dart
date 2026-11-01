@@ -33,7 +33,7 @@ class HtmlNodeWidget extends ConsumerWidget {
       switch (element.localName) {
         case 'p':
         case 'div':
-          final spans = _buildTextSpans(element);
+          final spans = _buildTextSpans(element, config: config, bionicEnabled: config.bionicReadingEnabled);
           if (spans.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
@@ -49,7 +49,7 @@ class HtmlNodeWidget extends ConsumerWidget {
         case 'h4':
         case 'h5':
         case 'h6':
-          final spans = _buildTextSpans(element);
+          final spans = _buildTextSpans(element, config: config, bionicEnabled: config.bionicReadingEnabled);
           if (spans.isEmpty) return const SizedBox.shrink();
           double sizeMult = 1.2;
           if (element.localName == 'h1') sizeMult = 2.0;
@@ -81,7 +81,7 @@ class HtmlNodeWidget extends ConsumerWidget {
             ),
           );
         default:
-          final spans = _buildTextSpans(element);
+          final spans = _buildTextSpans(element, config: config, bionicEnabled: config.bionicReadingEnabled);
           if (spans.isEmpty) return const SizedBox.shrink();
           return Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
@@ -95,7 +95,7 @@ class HtmlNodeWidget extends ConsumerWidget {
     } else if (node is dom.Text) {
       final text = node.text?.trim() ?? '';
       if (text.isEmpty) return const SizedBox.shrink();
-      final spans = _buildTextSpans(node);
+      final spans = _buildTextSpans(node, config: config, bionicEnabled: config.bionicReadingEnabled);
       return Padding(
         padding: const EdgeInsets.only(bottom: 16.0),
         child: _AnimatedText(
@@ -176,7 +176,12 @@ class HtmlNodeWidget extends ConsumerWidget {
     );
   }
 
-  List<TextSpan> _buildTextSpans(dom.Node node, {TextStyle? inheritedStyle}) {
+  List<TextSpan> _buildTextSpans(
+    dom.Node node, {
+    TextStyle? inheritedStyle,
+    bool bionicEnabled = false,
+    ReaderConfig? config,
+  }) {
     List<TextSpan> spans = [];
     
     if (node is dom.Text) {
@@ -208,16 +213,22 @@ class HtmlNodeWidget extends ConsumerWidget {
               text: collapsed.substring(matchIdx, matchEnd),
               style: (inheritedStyle ?? const TextStyle()).copyWith(
                 backgroundColor: isCurrentMatch
-                    ? const Color(0xFFFF9800)
-                    : const Color(0x66FFC107),
-                color: isCurrentMatch ? Colors.black : null,
+                    ? (config?.activeSearchHighlightColor ?? const Color(0xFFFF9800))
+                    : (config?.searchHighlightColor ?? const Color(0x66FFC107)),
+                color: isCurrentMatch
+                    ? (config?.activeSearchTextColor ?? const Color(0xFF000000))
+                    : null,
                 fontWeight: FontWeight.bold,
               ),
             ));
             startIndex = matchEnd;
           }
         } else {
-          spans.add(TextSpan(text: collapsed, style: inheritedStyle));
+          if (bionicEnabled) {
+            spans.addAll(_buildBionicSpans(collapsed, inheritedStyle));
+          } else {
+            spans.add(TextSpan(text: collapsed, style: inheritedStyle));
+          }
         }
       }
     } else if (node is dom.Element) {
@@ -243,10 +254,56 @@ class HtmlNodeWidget extends ConsumerWidget {
       }
       
       for (var child in node.nodes) {
-        spans.addAll(_buildTextSpans(child, inheritedStyle: style));
+        spans.addAll(_buildTextSpans(
+          child,
+          inheritedStyle: style,
+          bionicEnabled: bionicEnabled,
+          config: config,
+        ));
       }
     }
     return spans;
+  }
+
+  List<TextSpan> _buildBionicSpans(String text, TextStyle? baseStyle) {
+    final List<TextSpan> result = [];
+    final matches = RegExp(r"\p{L}[\p{L}'-]*|[^\p{L}]+", unicode: true).allMatches(text);
+
+    for (final match in matches) {
+      final token = match.group(0) ?? '';
+      if (token.isEmpty) continue;
+
+      final isLetter = RegExp(r'^\p{L}', unicode: true).hasMatch(token);
+      if (!isLetter) {
+        result.add(TextSpan(text: token, style: baseStyle));
+        continue;
+      }
+
+      final boldBoundary = (token.length / 2.0).ceil();
+      final firstPart = token.substring(0, boldBoundary);
+      final secondPart = token.substring(boldBoundary);
+
+      final effectiveStyle = baseStyle ?? const TextStyle();
+      final baseColor = effectiveStyle.color;
+
+      result.add(TextSpan(
+        text: firstPart,
+        style: effectiveStyle.copyWith(
+          fontWeight: FontWeight.w900,
+          color: baseColor,
+        ),
+      ));
+      if (secondPart.isNotEmpty) {
+        result.add(TextSpan(
+          text: secondPart,
+          style: effectiveStyle.copyWith(
+            fontWeight: FontWeight.w300,
+            color: baseColor?.withValues(alpha: 0.68),
+          ),
+        ));
+      }
+    }
+    return result;
   }
 }
 

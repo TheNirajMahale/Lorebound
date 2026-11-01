@@ -4,17 +4,20 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
 import '../../../library/data/repositories/local_book_repository.dart';
+import '../../../library/data/services/progress_sync_service.dart';
 import '../providers/reader_controller.dart';
 import '../providers/reader_state_providers.dart';
 import '../widgets/scroll_reader.dart';
 import '../widgets/paginated_reader.dart';
 import '../widgets/reader_bars.dart';
+import '../widgets/floating_reader_selection_card.dart';
+import '../providers/reader_selection_controller.dart';
 import '../../../../core/widgets/app_loading_indicator.dart';
 import '../../domain/models/reader_config.dart';
 import '../../../history/data/repositories/reading_history_repository.dart';
 import '../../../history/presentation/providers/history_controller.dart';
 import '../../../more/presentation/providers/more_provider.dart';
-import '../../data/services/epub_parser_service_provider.dart';
+import '../../data/services/epub_parser_service.dart';
 import '../../../statistics/data/repositories/reading_statistics_repository.dart';
 import '../../../statistics/presentation/providers/statistics_controller.dart';
 
@@ -38,6 +41,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
   Timer? _saveDebouncer;
   late final LocalBookRepository _repo;
   ReadingStatisticsRepository? _statsRepo;
+  ProgressSyncService? _progressSyncService;
   bool _isIncognito = false;
   bool _isDisposing = false;
   ReaderProgress? _lastProgress;
@@ -53,7 +57,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     _saveDebouncer?.cancel();
     _saveDebouncer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        _repo.updateBookProgress(widget.bookId, chapterIndex, progress.toString());
+        final ProgressSyncService service = _progressSyncService ?? ref.read(progressSyncServiceProvider);
+        service.recordProgress(
+          bookId: widget.bookId,
+          chapterIndex: chapterIndex,
+          readingPosition: progress.toString(),
+        );
       }
     });
   }
@@ -150,6 +159,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
       _repo = ref.read(localBookRepositoryProvider);
       _statsRepo = ref.read(readingStatisticsRepositoryProvider);
       _isIncognito = ref.read(incognitoModeProvider);
+      _progressSyncService = ref.read(progressSyncServiceProvider);
 
       _loadBookInitialState().catchError((e) {
         debugPrint('Error during initialization: $e');
@@ -162,6 +172,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _flushReadingSession();
+      if (widget.bookId >= 0 && _lastProgress != null) {
+        final ProgressSyncService service = _progressSyncService ?? ref.read(progressSyncServiceProvider);
+        service.recordProgress(
+          bookId: widget.bookId,
+          chapterIndex: _lastProgress!.chapterIndex,
+          readingPosition: _lastProgress!.progress.toString(),
+        );
+      }
     } else if (state == AppLifecycleState.resumed) {
       _sessionStartTime = DateTime.now();
     }
@@ -191,6 +209,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
       if (mounted) {
         ref.read(readerProgressProvider.notifier).updateProgress(startChapter, startProgress);
         ref.read(readerBookProvider.notifier).loadBook(widget.filePath, isAsset: false, bookId: widget.bookId);
+        ref.read(currentBookIdProvider.notifier).setBookId(widget.bookId);
         
         // Record initial opening in history and stats
         _recordHistory(startChapter);
@@ -217,9 +236,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _saveDebouncer?.cancel();
     _flushReadingSession();
-    // Do one final immediate save on exit if we have a valid ID
-    if (widget.bookId >= 0 && _lastProgress != null) {
-      _repo.updateBookProgress(widget.bookId, _lastProgress!.chapterIndex, _lastProgress!.progress.toString());
+    // Do one final immediate save on exit if we have a valid ID and cached service
+    if (widget.bookId >= 0 && _lastProgress != null && _progressSyncService != null) {
+      _progressSyncService!.recordProgress(
+        bookId: widget.bookId,
+        chapterIndex: _lastProgress!.chapterIndex,
+        readingPosition: _lastProgress!.progress.toString(),
+      );
     }
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -260,15 +283,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
     );
 
     final isLoaded = !_isInitializing && !bookState.isLoading && !bookState.hasError && bookState.hasValue;
+    final selectionState = ref.watch(readerSelectionControllerProvider);
+
+    void handleBack() {
+      if (selectionState.isVisible) {
+        ref.read(readerSelectionControllerProvider.notifier).dismiss();
+      } else if (context.canPop()) {
+        context.pop();
+      }
+    }
 
     final loadingTopBar = ReaderTopBar(
       chapterTitle: _loadingTitle ?? 'Loading...',
       config: readerState.config,
-      onBackPressed: () {
-        if (context.canPop()) {
-          context.pop();
-        }
-      },
+      onBackPressed: handleBack,
     );
 
     final loadingBottomBar = ReaderBottomBar(
@@ -281,62 +309,71 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> with WidgetsBinding
       author: _loadingAuthor,
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemOverlayStyle,
-      child: Scaffold(
-        backgroundColor: readerState.config.backgroundColor,
-        appBar: !isLoaded ? loadingTopBar : null,
-        bottomNavigationBar: !isLoaded ? loadingBottomBar : null,
-        body: Stack(
-          children: [
-            // The Reader Surface
-            if (_isInitializing)
-              const Center(child: AppLoadingIndicator())
-            else
-              bookState.when(
-                loading: () => const Center(child: AppLoadingIndicator()),
-              error: (err, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Error loading book:\n$err',
-                    style: TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
+    return PopScope(
+      canPop: !selectionState.isVisible,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (selectionState.isFullScreen) {
+          ref.read(readerSelectionControllerProvider.notifier).toggleFullScreen();
+        } else if (selectionState.isExpanded) {
+          ref.read(readerSelectionControllerProvider.notifier).collapse();
+        } else if (selectionState.isVisible) {
+          ref.read(readerSelectionControllerProvider.notifier).dismiss();
+        }
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: systemOverlayStyle,
+        child: Scaffold(
+          backgroundColor: readerState.config.backgroundColor,
+          appBar: !isLoaded ? loadingTopBar : null,
+          bottomNavigationBar: !isLoaded ? loadingBottomBar : null,
+          body: Stack(
+            children: [
+              // The Reader Surface
+              if (_isInitializing)
+                const Center(child: AppLoadingIndicator())
+              else
+                bookState.when(
+                  loading: () => const Center(child: AppLoadingIndicator()),
+                error: (err, stack) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Error loading book:\n$err',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
+                data: (book) {
+                  if (book != null) {
+                    return readerState.config.mode == ReaderMode.scroll
+                        ? ScrollReader(
+                            key: ValueKey(book.hashCode),
+                            book: book,
+                            config: readerState.config,
+                            onBackPressed: handleBack,
+                          )
+                        : PaginatedReader(
+                            key: ValueKey(book.hashCode),
+                            book: book,
+                            config: readerState.config,
+                            onBackPressed: handleBack,
+                          );
+                  }
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: readerState.config.textColor.withValues(alpha: 0.5),
+                    ),
+                  );
+                },
               ),
-              data: (book) {
-                if (book != null) {
-                  return readerState.config.mode == ReaderMode.scroll
-                      ? ScrollReader(
-                          key: ValueKey(book.hashCode),
-                          book: book,
-                          config: readerState.config,
-                          onBackPressed: () {
-                            if (context.canPop()) {
-                              context.pop();
-                            }
-                          },
-                        )
-                      : PaginatedReader(
-                          key: ValueKey(book.hashCode),
-                          book: book,
-                          config: readerState.config,
-                          onBackPressed: () {
-                            if (context.canPop()) {
-                              context.pop();
-                            }
-                          },
-                        );
-                }
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: readerState.config.textColor.withValues(alpha: 0.5),
-                  ),
-                );
-              },
-            ),
-          ],
+
+              // Floating Selection Card (always floats above ReaderBottomBar and reader surface)
+              if (isLoaded)
+                FloatingReaderSelectionCard(bookId: widget.bookId),
+            ],
+          ),
         ),
       ),
     );

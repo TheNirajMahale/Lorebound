@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:epubx/epubx.dart' hide Image;
 import '../../domain/models/reader_config.dart';
-import '../../data/services/epub_parser_service_provider.dart';
+import '../../data/services/epub_parser_service.dart';
 import '../providers/reader_state_providers.dart';
 import '../providers/reader_controller.dart';
 import 'chapter_scroll_view.dart';
@@ -248,6 +248,7 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                   child: ChapterScrollView(
                     key: ValueKey(chapter.Title ?? idx.toString()),
                     chapter: chapter,
+                    chapterIndex: index,
                     book: widget.book,
                     topPadding: 0.0,
                     bottomPadding: 0.0,
@@ -300,7 +301,7 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                           elevation: 6.0,
                           borderRadius: BorderRadius.circular(24.0),
                           color: Theme.of(context).colorScheme.primaryContainer,
-                          shadowColor: Colors.black45,
+                          shadowColor: widget.config.shadowColor,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(24.0),
                             onTap: _resumeReading,
@@ -343,13 +344,13 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
               child: Material(
                 elevation: 6.0,
                 borderRadius: BorderRadius.circular(28.0),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shadowColor: Colors.black45,
+                color: widget.config.toolbarBackgroundColor,
+                shadowColor: widget.config.shadowColor,
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28.0),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      color: widget.config.borderColor,
                       width: 1,
                     ),
                   ),
@@ -374,8 +375,8 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                                 _isAutoScrollPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                                 size: 20,
                                 color: _isAutoScrollPaused
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.onSurface,
+                                    ? widget.config.accentColor
+                                    : widget.config.textColor,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -384,8 +385,8 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: _isAutoScrollPaused
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).colorScheme.onSurface,
+                                      ? widget.config.accentColor
+                                      : widget.config.textColor,
                                 ),
                               ),
                             ],
@@ -396,7 +397,7 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                         height: 16,
                         width: 1,
                         margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                        color: Theme.of(context).colorScheme.outlineVariant,
+                        color: widget.config.dividerColor,
                       ),
                       // Speed indicator badge
                       Padding(
@@ -406,7 +407,7 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: widget.config.secondaryTextColor,
                           ),
                         ),
                       ),
@@ -427,7 +428,7 @@ class _ScrollReaderState extends ConsumerState<ScrollReader> {
                           child: Icon(
                             Icons.close_rounded,
                             size: 18,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: widget.config.secondaryTextColor,
                           ),
                         ),
                       ),
