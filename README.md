@@ -1,32 +1,34 @@
 # Lorebound
 
-> A lightweight, distraction-free, offline-first EPUB and webnovel reader built with native Flutter.
+A lightweight, offline-first EPUB and webnovel reader built with Flutter.
 
-Lorebound is a simple ebook reader designed for long-form reading. It runs completely offline with a local SQLite database — no account, login, or internet connection required. Pick an EPUB from your storage and start reading immediately.
+Lorebound is designed for distraction-free reading. It works fully offline using local SQLite storage—no account, login, or internet connection required. Pick an EPUB from your device and start reading.
 
-Cloud sync with the [**Lorekeeper API**](https://github.com/TheNirajMahale/lorekeeper-api) will be added later for multi-device reading, but account creation will always remain optional.
+Optional cloud sync with [Lorekeeper](https://github.com/TheNirajMahale/lorekeeper-api) is available if you want to back up books or sync progress across devices, but it remains strictly optional.
 
 ---
 
 ## Features
 
-- **Paginated & Vertical Scroll:** Read page-by-page or with continuous vertical scroll for webnovels. Remembers your exact paragraph when switching modes.
-- **Auto-Scroll:** Hands-free vertical scrolling with a floating pause/speed controller.
-- **Reading Statistics:** Track reading speed (WPM), total time read, active days, peak reading hours, and a shelf for books untouched for over a week.
-- **Search:** Search inside the active chapter (anchored above the keyboard) or search across all chapters from the book detail page.
-- **Typography & Themes:** Custom font sizes, line spacing, book fonts (Merriweather, Literata, Atkinson Hyperlegible), and 5 themes (Light, Sepia, Grey, Dark, OLED Black).
-- **100% Offline & Private:** Books, history, and reading sessions stay on your device in a local SQLite database.
+- **Reading Modes:** Paginated mode for traditional ebooks or vertical continuous scroll for webnovels. Remembers your exact position when switching.
+- **Offline Dictionary:** Fast local dictionary powered by SQLite with pre-seeded words and offline caching for new lookups.
+- **Text Selection:** Floating card with instant word definitions, auto-lookup, and quick copy/select-all toolbar. Selection pins cleanly hide when expanding the definition card.
+- **Reading Aids:** Bionic reading mode and customizable reading tools.
+- **Auto-Scroll:** Hands-free scrolling with adjustable speed for vertical reading.
+- **Reading Stats:** Track reading speed (WPM), reading time, active days, and view stalled books.
+- **Search:** Search within the current chapter or search across the entire book.
+- **Typography & Themes:** 5 color themes (Light, Sepia, Grey, Dark, OLED Black) and custom reader fonts (Merriweather, Literata, Atkinson Hyperlegible).
+- **Optional Cloud Sync:** Sync reading progress and back up books to your personal Lorekeeper server.
 
 ---
 
 ## Tech Stack
 
-- **Framework:** Flutter (3.24+)
+- **Framework:** Flutter
 - **State Management:** Riverpod
-- **Database:** Drift (SQLite)
-- **EPUB Parsing:** `epubx` + native Flutter widgets
-- **Routing:** `go_router`
-- **Networking (Optional Cloud):** `dio` + `flutter_secure_storage`
+- **Local Database:** Drift & SQLite
+- **EPUB Engine:** Native Flutter render engine (no WebViews)
+- **Networking & Storage:** Dio + Flutter Secure Storage
 
 ---
 
@@ -43,4 +45,4 @@ flutter run
 
 ## Documentation
 
-For architectural notes, API contracts, and the development roadmap, see [Project Documentation](docs/Lorebound.md).
+For architecture notes and detailed roadmaps, see [Docs](docs/Lorebound.md).

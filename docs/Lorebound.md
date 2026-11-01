@@ -59,9 +59,11 @@ lib/
 | **Framework** | Flutter | Cross-platform mobile |
 | **State Management** | `flutter_riverpod` (v3.x) | Modern, compile-safe, scoped providers |
 | **Local Database** | `drift` (SQLite) | Relational queries, schema migrations, actively maintained |
+| **Offline Dictionary** | `sqlite3` | Pure-Dart direct SQLite connection for 0–2ms Tier 0 vocabulary lookup |
 | **Networking** | `dio` | Interceptors for auth, retry logic, better error handling |
 | **Routing** | `go_router` | Official Flutter team router, deep linking, auth guards |
 | **EPUB Parsing** | `epubx` + `html` | We use a custom **Native Render Engine**! We parse the EPUB internally, chunk the HTML, and map it directly to native Flutter Text/Image widgets for absolute control over performance, layout, and UI. No WebViews! |
+| **Selection Engine** | `TextSelectionHandleControls` | Native Flutter selection mixin delegating toolbar presentation cleanly to reactive context menus |
 | **Secure Storage** | `flutter_secure_storage` | JWT token persistence |
 | **File Picking** | `file_picker` | Local EPUB import |
 | **File Storage** | `path_provider` | App document directory for cached EPUBs |
@@ -296,51 +298,44 @@ Build the offline book management library and local database.
 
 ---
 
-### Phase 8: Lorekeeper Backend Integration (Up Next — Active Focus)
-With the local reader engine, library management, and reading tracker fully built and polished offline, the app is ready for cloud synchronization with the [**Lorekeeper API**](https://github.com/TheNirajMahale/lorekeeper-api).
+### Phase 8: Lorekeeper Backend Integration & Cloud Sync (Completed)
+Connected the local offline reader to the [**Lorekeeper API**](https://github.com/TheNirajMahale/lorekeeper-api) with zero mandatory barriers:
+- **Optional Authentication:** Guests read offline out-of-the-box. Login/Register endpoints (`POST /auth/login`, `POST /auth/register`, `POST /auth/forgot-password`, `POST /auth/reset-password`) persist tokens securely via `flutter_secure_storage`.
+- **Tri-State Book Model:** Books track `localOnly`, `cloudOnly`, and `synced` states with badges in the library and dual-tier deletion ("Remove Download" local vs "Delete from Library" cloud).
+- **Durable Progress Sync Queue:** Reading progress changes are saved to a durable queue in `UserPreferences` and flushed asynchronously on network availability with timestamp conflict resolution.
+- **Vault Transfers:** Direct cloud backup (`POST /books/upload`) and remote download (`GET /books/{id}/download`) with background chunking and progress reporting.
 
-- **8.1 — Optional Authentication & Session Management:**
-  - Login is 100% optional: the app starts in local guest mode and never blocks reader access behind a login wall.
-  - Connect to Lorekeeper Auth endpoints: `POST /auth/register`, `POST /auth/login`, `POST /auth/google`.
-  - JWT token storage via `flutter_secure_storage`.
-  - Global `SessionController` (login, logout, token refresh, user profile).
-  - Cloud sync settings toggle in More/Settings to enable/disable cloud sync.
-- **8.2 — Cloud Library Sync & Remote Catalog:**
-  - Connect to `/books` endpoints (`GET /books`, `POST /books/upload`, `DELETE /books/{id}`).
-  - Implement two-tier deletion strategy ("Remove Download" local-only vs "Delete from Library" cloud nuclear wipe).
-  - Background synchronization worker with `dio` interceptors and retry policies.
-- **8.3 — Reading Progress & History Synchronization:**
-  - Sync reading sessions and chapter progress with `/reading-history` and `/books/{id}/progress`.
-  - Debounced progress sync on chapter transition.
-  - Conflict resolution dialog ("You were on Chapter 14 on Web, resume from Chapter 14?").
-- **8.4 — RuneGlass Module Integration:**
-  - Bionic reading mode rendering (bold leading half of words).
-  - Tap-to-lookup dictionary and word definitions via RuneGlass API.
+### Phase 9: Non-Modal Reader Selection Architecture (Completed)
+Redesigned text selection from intrusive modal sheets to a fluid, non-modal experience:
+- **Non-Modal Floating Card (`FloatingReaderSelectionCard`):** In-tree bottom card that sits directly inside the reader stack without blocking touches or mounting a modal barrier.
+- **Dual-State Geometry:**
+  - **Peeking State (~175dp):** Compact word card showing dictionary definition without occluding text.
+  - **Expanded / Full-Screen State (70% - 100% height):** Deep scrolling view with custom header actions and copy buttons.
+- **Custom Floating Toolbar (`ReaderFloatingToolbar`):** Themed floating tooltip positioned near selected text with `Copy` and `Select All` actions.
+- **Clean Selection Cleanup:** Removed text highlighting tokens and controllers to keep reading surfaces clean and distraction-free.
+
+### Phase 10: High-Speed Offline SQLite Dictionary Engine (Completed)
+- **Dedicated SQLite Storage (`LocalDictionaryService`):** High-speed embedded SQLite database (`local_dictionary.db`) operating at 0–2ms Tier 0 lookup latency.
+- **Pre-Seeded Literary Vocabulary:** Automatically seeds essential literary and philosophical words (*ephemeral, serendipity, petrichor, wanderlust, solitude, etc.*) upon first launch.
+- **Hybrid Tier 0/Tier 1 Fallback:** Integrated with `RuneGlassService`—resolves instantly from local SQLite, falling back to online dictionary APIs only when needed and caching resolved definitions locally for all future offline lookups.
+
+### Phase 11: Seamless Reactive Selection Handles & Controls (Completed)
+- **Modern Flutter Text Selection (`ReaderTextSelectionControls`):** Mixes in `TextSelectionHandleControls` to delegate toolbar presentation cleanly to `contextMenuBuilder` (`ReaderReactiveContextMenu`), eliminating rogue OS/Material fallback popups.
+- **Reactive Handle Suppression (`_ReactiveSelectionHandle`):** Selection pins visually shrink to `Size.zero` and `SizedBox.shrink()` when the bottom card expands, preventing pins from occluding sheet content while preserving the underlying text selection focus.
+- **Symmetric Reappearance:** Collapsing the bottom card back to peeking mode reactively restores both the teardrop pins and the floating toolbar above the selection.
 
 ---
 
-### Phase 9: In-Reader Bookmarks, Highlights & Annotations (Future Scope)
-Deep study and annotation capabilities for the native reading engine:
+### Phase 12: In-Reader Bookmarks & Study Tools (Future Scope)
 - In-chapter bookmarks with custom labels and chapter jump targets.
-- Text selection and multi-color highlighting (Yellow, Mint, Lavender, Coral) with attached notes.
-- Centralized annotations drawer and review sheet.
-- Export annotations to Markdown and JSON formats.
+- Export annotations and vocabulary lists to Markdown and JSON formats.
 
 ---
 
-### Phase 10: Multi-Cycle Reread Engine & Arc Affinity (Future Scope / Long-Term Roadmap)
-Once core cloud synchronization and study tools are established, introduce full multi-cycle re-reading and arc revisit tracking:
+### Phase 13: Multi-Cycle Reread Engine & Arc Affinity (Future Scope / Long-Term Roadmap)
 - **Drift Schema Extension (`ReadCycles` Table):** Track cycle indices (`cycleIndex: 1, 2...`), distinct start/completion dates, and isolated chapter coordinates per cycle.
-- **Cycle-Aware Cloud Protocol:** Extend Lorekeeper API endpoints (`POST /books/{id}/cycles/start`, `GET /books/{id}/cycles`) with conflict-free merge rules so starting a second read never overwrites the cloud completion badge.
-- **Library Shelves & Badging:** Cyclical progress indicators on book cards (e.g., `Completed (2nd Read • Ch. 24 / 900)`).
-- **Re-read Affinity & Arc Revisit Analytics:** Distinguish full sequential rereads from frequent chapter/arc revisits, adding an Arc Affinity module to the Statistics Dashboard.
-
----
-
-### Phase 11: Multi-Platform Polish & Offline Queue Sync (Future Scope)
-- Offline-first mutation queue (stores progress/library modifications locally when offline and pushes to Lorekeeper automatically when connection is restored).
-- Immersive edge-to-edge system navigation bar adaptations across Android 15 and iOS.
-- Full local backup & restore bundle (`.lorebackup` archive).
+- **Cycle-Aware Cloud Protocol:** Conflict-free merge rules so starting a second read never overwrites cloud completion badges.
+- **Re-read Affinity & Arc Revisit Analytics:** Distinguish full sequential rereads from frequent chapter/arc revisits in the Statistics Dashboard.
 
 ---
 
