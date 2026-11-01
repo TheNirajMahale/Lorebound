@@ -87,13 +87,47 @@ class BookListTile extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    book.title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          book.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (book.isCloudOnly) ...[
+                        const SizedBox(width: AppSpacing.xs),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                            border: Border.all(
+                              color: colorScheme.primary.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.cloud_outlined, size: 12, color: colorScheme.primary),
+                              const SizedBox(width: 3),
+                              Text(
+                                'Cloud',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (book.author != null && book.author!.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),
@@ -120,7 +154,7 @@ class BookListTile extends ConsumerWidget {
                             minHeight: 4,
                             backgroundColor: colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              progressValue == 1.0 ? Colors.green : colorScheme.primary,
+                              progressValue == 1.0 ? colorScheme.tertiary : colorScheme.primary,
                             ),
                           ),
                         ),

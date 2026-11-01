@@ -65,6 +65,22 @@ class LocalBookRepository {
     );
   }
 
+  Future<void> updateBookBackendId(int id, int? backendId) async {
+    await (_db.update(_db.books)..where((t) => t.id.equals(id))).write(
+      BooksCompanion(
+        backendId: drift.Value(backendId),
+      ),
+    );
+  }
+
+  Future<void> removeBookDownload(int id) async {
+    await (_db.update(_db.books)..where((t) => t.id.equals(id))).write(
+      const BooksCompanion(
+        filePath: drift.Value(null),
+      ),
+    );
+  }
+
   Future<void> updateBooksStatus(List<int> ids, String status, {int? chapter}) async {
     await (_db.update(_db.books)..where((t) => t.id.isIn(ids))).write(
       BooksCompanion(

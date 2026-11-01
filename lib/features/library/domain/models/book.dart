@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../../../core/database/app_database.dart';
+export 'book_storage_state.dart';
 
 class Book {
   final int id;

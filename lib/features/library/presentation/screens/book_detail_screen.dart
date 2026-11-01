@@ -12,6 +12,7 @@ import '../widgets/book_search_sheet.dart';
 import '../../domain/models/book.dart';
 import '../../../settings/domain/models/chapter_swipe_config.dart';
 import '../../../settings/presentation/providers/chapter_swipe_provider.dart';
+import '../../../auth/presentation/controllers/session_controller.dart';
 
 class BookDetailScreen extends ConsumerWidget {
   final int bookId;
@@ -72,14 +73,54 @@ class BookDetailScreen extends ConsumerWidget {
                           showDragHandle: true,
                           builder: (context) => AssignCategorySheet(selectedBookIds: [bookId]),
                         );
-                      } else if (value == 'delete') {
+                      } else if (value == 'upload_vault') {
+                        await _handleUpload(context, ref, book);
+                      } else if (value == 'download_vault') {
+                        await _handleDownload(context, ref, book);
+                      } else if (value == 'remove_download') {
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Delete Book?'),
+                            title: const Text('Remove Download?'),
                             content: const Text(
-                              'This will permanently remove the book from your library and delete its local files. This cannot be undone.',
+                              'The local EPUB file and reading cache will be deleted to free device storage. The book remains in your cloud library and can be re-downloaded anytime.',
                             ),
+                            actions: [
+                              TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
+                              FilledButton(
+                                onPressed: () => context.pop(true),
+                                child: const Text('Remove Download'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true && context.mounted) {
+                          await ref.read(libraryControllerProvider.notifier).removeDownload(bookId);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Local download removed. Preserved in cloud.'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      } else if (value == 'delete') {
+                        final String title = book.isSynced
+                            ? 'Delete from Library & Cloud?'
+                            : (book.isCloudOnly ? 'Delete from Cloud?' : 'Delete Book?');
+                        final String message = book.isSynced
+                            ? 'This will delete the local file and permanently remove the book from your LoreKeeper cloud account.'
+                            : (book.isCloudOnly
+                                ? 'This will permanently remove the book from your LoreKeeper cloud account.'
+                                : 'This will permanently remove the book from your device. This cannot be undone.');
+
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: Text(title),
+                            content: Text(message),
                             actions: [
                               TextButton(onPressed: () => context.pop(false), child: const Text('Cancel')),
                               FilledButton(
@@ -92,7 +133,10 @@ class BookDetailScreen extends ConsumerWidget {
                         );
 
                         if (confirm == true && context.mounted) {
-                          ref.read(libraryControllerProvider.notifier).deleteBook(bookId);
+                          ref.read(libraryControllerProvider.notifier).deleteBook(
+                                bookId,
+                                deleteFromCloud: book.backendId != null,
+                              );
                           context.pop(); // Go back to library
                         }
                       }
@@ -102,9 +146,29 @@ class BookDetailScreen extends ConsumerWidget {
                         value: 'change_category',
                         child: Text('Change Category'),
                       ),
+                      if (book.isLocalOnly)
+                        const PopupMenuItem(
+                          value: 'upload_vault',
+                          child: Text('Backup to Cloud Vault'),
+                        ),
+                      if (book.isCloudOnly)
+                        const PopupMenuItem(
+                          value: 'download_vault',
+                          child: Text('Download to Device'),
+                        ),
+                      if (book.isSynced)
+                        const PopupMenuItem(
+                          value: 'remove_download',
+                          child: Text('Remove Download (Keep in Cloud)'),
+                        ),
                       PopupMenuItem(
                         value: 'delete',
-                        child: Text('Delete Book', style: TextStyle(color: colorScheme.error)),
+                        child: Text(
+                          book.isSynced
+                              ? 'Delete from Library & Cloud'
+                              : (book.isCloudOnly ? 'Delete from Cloud' : 'Delete Book'),
+                          style: TextStyle(color: colorScheme.error),
+                        ),
                       ),
                     ],
                   ),
@@ -222,28 +286,50 @@ class BookDetailScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: () {
-                        if (book.filePath != null) {
-                           context.push('/reader?bookId=${book.id}&filePath=${Uri.encodeComponent(book.filePath!)}');
-                        }
-                      },
-                      icon: Icon(isUnread ? Icons.play_arrow : Icons.play_circle_fill),
-                      label: Text(isUnread ? 'Read' : 'Resume'),
+                      onPressed: book.filePath != null
+                          ? () {
+                              context.push(
+                                '/reader?bookId=${book.id}&filePath=${Uri.encodeComponent(book.filePath!)}',
+                              );
+                            }
+                          : () => _handleDownload(context, ref, book),
+                      icon: Icon(book.isCloudOnly
+                          ? Icons.cloud_download_outlined
+                          : (isUnread ? Icons.play_arrow : Icons.play_circle_fill)),
+                      label: Text(book.isCloudOnly
+                          ? 'Download to Read'
+                          : (isUnread ? 'Read' : 'Resume')),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  IconButton.filledTonal(
-                    icon: const Icon(Icons.download),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).clearSnackBars();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Coming soon'), duration: Duration(seconds: 1)),
-                      );
-                    },
-                  ),
+                  if (book.isCloudOnly)
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.download),
+                      tooltip: 'Download to Device',
+                      onPressed: () => _handleDownload(context, ref, book),
+                    )
+                  else if (book.isLocalOnly)
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.cloud_upload_outlined),
+                      tooltip: 'Backup to Cloud Vault',
+                      onPressed: () => _handleUpload(context, ref, book),
+                    )
+                  else
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.cloud_done_outlined),
+                      tooltip: 'Synced with Cloud Vault',
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('This book is safely backed up and synced with your LoreKeeper vault.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -301,7 +387,7 @@ class BookDetailScreen extends ConsumerWidget {
                   error: (e, st) => SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Text('Error loading chapters: $e', style: TextStyle(color: Colors.red)),
+                      child: Text('Error loading chapters: $e', style: TextStyle(color: colorScheme.error)),
                     ),
                   ),
                   data: (titles) => _buildChapterList(context, consumerRef, book, titles, colorScheme, swipeConfig),
@@ -398,5 +484,108 @@ class BookDetailScreen extends ConsumerWidget {
         childCount: titles.length,
       ),
     );
+  }
+
+  Future<void> _handleUpload(BuildContext context, WidgetRef ref, Book book) async {
+    final authState = ref.read(sessionControllerProvider).value;
+    if (authState == null || !authState.isAuthenticated) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('LoreKeeper Account Required'),
+          content: const Text(
+            'To backup books to your cloud vault, sign in or create a free LoreKeeper account.',
+          ),
+          actions: [
+            TextButton(onPressed: () => ctx.pop(), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                ctx.pop();
+                context.push('/auth');
+              },
+              child: const Text('Sign In'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    final colorScheme = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onInverseSurface),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Uploading "${book.title}" to Vault...')),
+          ],
+        ),
+        duration: const Duration(minutes: 2),
+      ),
+    );
+
+    final success = await ref.read(libraryControllerProvider.notifier).uploadBook(book.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${book.title}" backed up to Cloud Vault!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to upload book to vault. Please check server connection.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleDownload(BuildContext context, WidgetRef ref, Book book) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onInverseSurface),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Downloading "${book.title}" from Vault...')),
+          ],
+        ),
+        duration: const Duration(minutes: 2),
+      ),
+    );
+
+    final success = await ref.read(libraryControllerProvider.notifier).downloadBook(book.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${book.title}" downloaded! Ready to read offline.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Download failed. Ensure backend server is reachable.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

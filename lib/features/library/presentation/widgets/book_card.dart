@@ -169,7 +169,7 @@ class BookCard extends ConsumerWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: colorScheme.shadow.withValues(alpha: 0.3),
                     blurRadius: 4,
                   ),
                 ],
@@ -199,6 +199,42 @@ class BookCard extends ConsumerWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+            ),
+          ),
+        // Cloud Only Badge
+        if (book.isCloudOnly)
+          Positioned(
+            top: AppSpacing.xs,
+            right: isSelected ? 30 : AppSpacing.xs,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+                border: Border.all(
+                  color: colorScheme.primary.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.cloud_outlined,
+                    size: 11,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    'Cloud',
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -35,7 +35,7 @@ class StalledBooksShelfCard extends StatelessWidget {
             children: [
               Icon(
                 Icons.check_circle_outline_rounded,
-                color: Colors.green.shade400,
+                color: colorScheme.tertiary,
                 size: 28,
               ),
               const SizedBox(width: AppSpacing.md),

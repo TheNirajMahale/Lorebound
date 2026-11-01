@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:html/parser.dart' as html_parser;
 import '../../../../core/theme/app_spacing.dart';
 import '../../domain/models/book.dart';
-import '../../../reader/data/services/epub_parser_service_provider.dart';
+import '../../../reader/data/services/epub_parser_service.dart';
 
 class BookSearchResult {
   final int chapterIndex;

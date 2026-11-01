@@ -3,6 +3,7 @@ import '../../domain/models/book.dart';
 import 'library_controller.dart';
 import 'library_categories_provider.dart';
 import '../../../../core/providers/shared_prefs_provider.dart';
+import '../../../more/presentation/providers/more_provider.dart';
 import '../../../settings/presentation/providers/library_ui_provider.dart';
 
 enum SortType { title, lastRead, dateAdded }
@@ -179,12 +180,16 @@ final filteredLibraryProvider = Provider<AsyncValue<List<Book>>>((ref) {
   final prefs = ref.watch(libraryPreferencesProvider);
   final effectiveCategoryId = ref.watch(effectiveCategoryIdProvider);
   final bookCategoriesState = ref.watch(bookCategoriesProvider);
+  final downloadedOnly = ref.watch(downloadedOnlyProvider);
 
   return booksState.whenData((books) {
     final bookCategories = bookCategoriesState.value ?? [];
 
     var filtered = books.where((book) {
-      // 0. Category Filter
+      // 0. Downloaded Only Filter (from More tab)
+      if (downloadedOnly && !book.isDownloaded) return false;
+
+      // Category Filter
       if (effectiveCategoryId != null) {
         final isInCat = bookCategories.any((bc) => bc.bookId == book.id && bc.categoryId == effectiveCategoryId);
         if (!isInCat) return false;

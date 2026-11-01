@@ -10,7 +10,6 @@ import '../../domain/models/book.dart';
 import '../repositories/local_book_repository.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../reader/data/services/epub_parser_service.dart';
-import '../../../reader/data/services/epub_parser_service_provider.dart';
 import '../../../reader/data/services/epub_cache_service.dart';
 
 import '../../presentation/providers/library_controller.dart';

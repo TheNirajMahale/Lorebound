@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../features/reader/data/services/epub_parser_service_provider.dart';
+import '../../../../features/reader/data/services/epub_parser_service.dart';
 import '../../data/repositories/local_book_repository.dart';
 
 final bookChaptersProvider = FutureProvider.family<List<String>, String>((ref, filePath) async {

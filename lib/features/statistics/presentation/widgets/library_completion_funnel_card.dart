@@ -86,7 +86,7 @@ class LibraryCompletionFunnelCard extends StatelessWidget {
                     if (completedRatio > 0)
                       Expanded(
                         flex: (completedRatio * 100).toInt().clamp(1, 100),
-                        child: Container(color: Colors.green.shade500),
+                        child: Container(color: colorScheme.tertiary),
                       ),
                     if (wantToReadRatio > 0)
                       Expanded(
@@ -119,7 +119,7 @@ class LibraryCompletionFunnelCard extends StatelessWidget {
                 _buildStatusItem(
                   label: 'Completed',
                   count: stats.booksCompleted,
-                  color: Colors.green.shade500,
+                  color: colorScheme.tertiary,
                   colorScheme: colorScheme,
                 ),
                 _buildStatusItem(
