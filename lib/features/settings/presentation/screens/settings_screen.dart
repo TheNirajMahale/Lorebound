@@ -115,6 +115,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListView(
       children: [
         ListTile(
+          leading: Icon(Icons.cloud_outlined, color: colorScheme.onSurfaceVariant),
+          title: const Text('Account & Cloud Sync'),
+          subtitle: const Text('Sign in, server URL, cloud backup'),
+          onTap: () => context.push('/auth'),
+        ),
+        ListTile(
           leading: Icon(Icons.palette_outlined, color: colorScheme.onSurfaceVariant),
           title: const Text('Appearance'),
           subtitle: const Text('Theme, date format'),

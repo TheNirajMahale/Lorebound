@@ -16,6 +16,7 @@ import '../../features/settings/presentation/screens/library_settings_screen.dar
 import '../../features/settings/presentation/screens/reader_settings_screen.dart';
 import '../../features/settings/presentation/screens/data_storage_settings_screen.dart';
 import '../../features/reader/presentation/screens/reader_screen.dart';
+import '../../features/auth/presentation/screens/auth_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _libraryNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'library');
@@ -95,6 +96,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/more/settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/auth',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AuthScreen(),
       ),
 
       // Settings sub-pages

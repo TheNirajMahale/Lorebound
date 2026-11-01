@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AppLoadingIndicator extends StatefulWidget {
-  const AppLoadingIndicator({super.key});
+  final Color? color;
+  const AppLoadingIndicator({super.key, this.color});
 
   @override
   State<AppLoadingIndicator> createState() => _AppLoadingIndicatorState();
@@ -37,7 +38,7 @@ class _AppLoadingIndicatorState extends State<AppLoadingIndicator> with SingleTi
           child: CircularProgressIndicator(
             value: 0.25, // Fixed arc size prevents the 'sweep' stutter
             strokeWidth: 3.0,
-            color: Theme.of(context).colorScheme.primary,
+            color: widget.color ?? Theme.of(context).colorScheme.primary,
             strokeCap: StrokeCap.round,
           ),
         ),
